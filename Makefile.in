@@ -24,6 +24,7 @@ SRC_COMMON := \
 all: $(LIBMODELICA) doc
 
 include parser/Makefile.include
+include test/parse/Makefile.include
 include mmo/Makefile.include
 include flatter/Makefile.include
 #include antialias/Makefile.include

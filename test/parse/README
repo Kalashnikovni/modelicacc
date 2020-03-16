@@ -1,0 +1,4 @@
+To test this stage run the following command replacing filename with the name
+of the desired file that is in the current directory:
+
+../../bin/parse ./filename
