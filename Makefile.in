@@ -23,11 +23,12 @@ SRC_COMMON := \
 
 all: $(LIBMODELICA) doc
 
-include antialias/Makefile.include
+include parser/Makefile.include
 include mmo/Makefile.include
 include flatter/Makefile.include
-include causalize/Makefile.include
-include test/causalize/Makefile.include
+#include antialias/Makefile.include
+#include causalize/Makefile.include
+#include test/causalize/Makefile.include
 
 OBJS_COMMON = $(SRC_COMMON:.cpp=.o)
 
@@ -47,4 +48,4 @@ doc: Doxyfile
 	doxygen
 
 clean:
-	$(RM) -rf $(OBJS_COMMON) $(OBJS_ANTIALIAS) $(OBJS_FLATTER) $(OBJS_MMO) $(OBJS_CAUSALIZE) $(LIBMODELICA) doc
+	$(RM) -rf $(OBJS_COMMON) $(OBJS_PARSER) $(OBJS_ANTIALIAS) $(OBJS_FLATTER) $(OBJS_MMO) $(OBJS_CAUSALIZE) $(LIBMODELICA) doc
