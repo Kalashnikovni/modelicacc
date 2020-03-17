@@ -53,6 +53,7 @@ class Connectors{
 
   void createGraph(EquationList &eqs, OptExpList range);
   Pair<Expression, ExpOptList> separate(Expression e);
+  bool checkRanges(ExpOptList range1, ExpOptList range2);
 
   private:
   member_(SetBasedGraph, G);

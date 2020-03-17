@@ -18,8 +18,11 @@
 
 ******************************************************************************/
 
-#include <flatter/connectors.h>
 #include <iostream>
+
+#include <flatter/connectors.h>
+
+#include <util/ast_visitors/contains_expression.h>
 
 using namespace std;
 using namespace Modelica;
@@ -64,6 +67,14 @@ void Connectors::createGraph(EquationList &eqs, OptExpList range){
   
       Pair<Expression, ExpOptList> left = separate(eleft);
       Pair<Expression, ExpOptList> right = separate(eright);
+
+      ExpOptList range1 = get<1>(left);
+      ExpOptList range2 = get<1>(right);
+
+      if(checkRanges(range1, range2)){
+        //SetVertexLF l = createVertex(get<0>(left), range1);
+        //SetVertexLF r = createVertex(get<0>(right), range2);
+      }
     }
   }
 }
@@ -94,4 +105,53 @@ Pair<Expression, ExpOptList> Connectors::separate(Expression e){
   Expression r = Reference(Reference(), get<0>(rf), Option<ExpList>());
   if (isU) r = UnaryOp(r, op);
   return Pair<Expression, ExpOptList>(r, opti);
+}
+
+bool Connectors::checkRanges(ExpOptList range1, ExpOptList range2){
+  std::vector<Name> vars = mmoclass().variables();
+
+  if(range1 && range2){
+    ExpList r1 = range1.get();
+    ExpList r2 = range2.get();
+ 
+    if(r1.size() == 0 || r2.size() == 0)
+      return true;
+
+    else if(r1.size() != r2.size()){
+      cerr << "Unmatched dimensions in equation connect" << endl;
+      return false;
+    }
+
+    else{
+      ExpList::iterator it1 = r1.begin(), it2 = r2.begin();
+
+      while(it1 != r1.end()){
+        foreach_(Name n1, vars){
+          Expression e1(n1);
+          ContainsExpression c1(*it1);
+          ContainsExpression c2(*it2);
+ 
+          bool cn11 = Apply(c1, e1);
+          bool cn21 = Apply(c2, e1);
+
+          // This loop checks that there is only one variable at each subscript
+          foreach_(Name n2, vars){
+            Expression e2(n2);
+            bool cn12 = Apply(c1, e2);
+            bool cn22 = Apply(c2, e2);
+
+            if((cn11 && cn12) || (cn21 && cn22)){
+              cerr << "Only one variable permitted at subscript";
+              return false;
+            }
+          }
+        }
+
+        ++it1;
+        ++it2;
+      }
+    }
+  }
+
+  return true;
 }
