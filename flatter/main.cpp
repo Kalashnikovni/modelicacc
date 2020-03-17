@@ -17,19 +17,23 @@
 
 ******************************************************************************/
 
-#include <flatter/connectors.h>
-#include <mmo/mmo_class.h>
-#include <mmo/mmo_tree.h>
-#include <util/table.h>
-#include <flatter/flatter.h>
-#include <iostream>
-#include <parser/parser.h>
+#include <boost/type_traits/remove_cv.hpp>
 #include <boost/variant/get.hpp>
-#include <flatter/class_finder.h>
+
+#include <fstream>
+#include <iostream>
 #include <unistd.h>
 
-int main(int argc, char** argv)
-{
+#include <flatter/class_finder.h>
+#include <flatter/connectors.h>
+#include <flatter/flatter.h>
+#include <mmo/mmo_class.h>
+#include <mmo/mmo_tree.h>
+#include <parser/parser.h>
+
+#include <util/table.h>
+
+int main(int argc, char** argv){
   using namespace std;
   using namespace Modelica::AST;
   using namespace Modelica;
@@ -75,14 +79,14 @@ int main(int argc, char** argv)
 
     Flatter f = Flatter();
     Connectors co = Connectors(mmo);
-    if (className == NULL) {  // if no specified, flat last class
+    if (className == NULL)  // if no specified, flat last class
       className = (char*)::className(sd.classes().back()).c_str();
-    }
-    if (className != NULL) {
+
+    if (className != NULL){
       if (debug) std::cerr << "Searching for class " << (className ? className : "NULL") << std::endl;
       ClassFinder re = ClassFinder();
       OptTypeDefinition m = re.resolveType(mmo, className);
-      if (m) {
+      if (m){
         typeDefinition td = m.get();
         Type::Type t_final = get<1>(td);
         if (is<Type::Class>(t_final)) mmo = *(boost::get<Type::Class>(t_final).clase());
@@ -102,15 +106,17 @@ int main(int argc, char** argv)
       std::cerr << " - - - - - - - - - - - - - - - - - - - - - - - - " << std::endl << std::endl;
     }
 
+    co.debug(filename);
+/*
     co.resolve(mmo);
     if (debug) {
       std::cerr << " - - - - - - - - - - - - - - - - - - - - - - - - " << std::endl;
       co.Debug(filename);
       std::cerr << " - - - - - - - - - - - - - - - - - - - - - - - - " << std::endl;
     }
-
+*/
     // f.Flat(mmo,true,true);
-    f.removeConnectorVar(mmo);
+    //f.removeConnectorVar(mmo);
     if (debug) std::cerr << "Final Result: " << endl;
     if (out) {
       if (debug) std::cout << mmo << std::endl;
