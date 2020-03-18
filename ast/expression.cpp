@@ -168,7 +168,8 @@ std::ostream& operator<<(std::ostream& out, const UnaryOp& n)  // output
   return out;
 }
 bool UnaryOp::operator==(const UnaryOp& other) const { return other.exp() == exp() && other.op() == op(); }
-member_imp(UnaryOp, Expression, exp) member_imp(UnaryOp, UnaryOpType, op)
+member_imp(UnaryOp, Expression, exp); 
+member_imp(UnaryOp, UnaryOpType, op);
 
     ForExp::ForExp(Expression e, Indexes ind)
     : indices_(ind), exp_(e){};

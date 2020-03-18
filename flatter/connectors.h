@@ -28,6 +28,7 @@
 #include <ast/ast_types.h>
 #include <ast/element.h>
 #include <ast/equation.h>
+#include <ast/expression.h>
 #include <ast/statement.h>
 #include <flatter/class_finder.h>
 #include <mmo/mmo_class.h>
@@ -54,8 +55,13 @@ class Connectors{
   void createGraph(EquationList &eqs, OptExpList range);
   Pair<Expression, ExpOptList> separate(Expression e);
   bool checkRanges(ExpOptList range1, ExpOptList range2);
+  Option<LinearFunc> parseExpToLF(Expression e);
+  bool isParseNum(Expression e);
+  Option<LinearFunc> parseAddSub(Expression l, Expression r, BinOpType bopt);
+  Option<SetVertexLF> createVertex(Expression e, ExpOptList range);
 
   private:
+  member_(int, vCount);
   member_(SetBasedGraph, G);
   member_(MMO_Class, mmoclass);
 };
