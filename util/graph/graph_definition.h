@@ -37,64 +37,122 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/icl/discrete_interval.hpp>
 #include <boost/optional/optional.hpp>
+#include <boost/variant.hpp>
+#include <boost/variant/get.hpp>
 
 #include <ast/ast_types.h>
 #include <ast/equation.h>
 #include <util/table.h>
 
 namespace ICL = boost::icl;
+using boost::variant;
 
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
-// Vertices
+// Maps
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
 
-struct SetVertex{
- SetVertex(){};
+// T1 should have some way of applying the expression to domain.
+// Methods T1 should have:
+//  * applyExpr(dom)
+//  * compose(m2)
+//  * mininv()
 
- member_(int, card); 
- /// @brief This is used for debugging purposes
- member_(int, index);
- member_(std::string, name); // Used to pretty print
 
- printable(SetVertex);
+// First type is the type of expression, second the type of the domain,
+// and finally the type of the image. T2 and T3 should be sets, but 
+// represented intensively.
+template <typename T1, typename T2, typename T3>
+struct MapAbs{
+  MapAbs(){};
+  MapAbs(T1 expr, T2 dom); 
+
+  T3 image(T2 set1){
+    T2 newSet1 = dom.cap(set1);
+   
+    if(newSet1.empty()){
+      T3 emptySet();
+      return emptySet;
+    }
+
+    return expr.applyExpr(newSet1);
+  }
+
+  T2 preImage(T3 set1){
+    Option<T2> preSet = expr.inv(set1);
+    T2 newSet1;
+
+    if(preSet)
+      newSet1 = dom.cap(preSet.get);
+    else
+      newSet1 = dom.min();
+
+    return newSet1;
+  }
+
+  MapAbs compose(const MapAbs &m2){
+    T1 eres = expr.compose(m2.expr());    
+    T2 dres = m2.preImage(dom.cap(m2.image(m2.dom())));
+
+    return MapAbs(eres, dres);
+  }
+
+  MapAbs mininv(){
+    Option<T1> opExpr = expr.inv();
+    T1 eres;
+    T3 dres = image();
+
+    if(opExpr)
+      eres = opExpr.get();
+    else
+      eres = eres.constant(dom.min()); 
+  
+    return MapAbs(eres, dres);
+  }
+
+  private:
+  T1 expr;
+  T2 dom;
 };
 
-/* \struct LinearFunc
-*  Array access can be thought as a function with domain in the
-*  naturals from 0 to the size of the array minus 1. In this case functions
-*  are restricted to only linear because intersection can be
-*  done in constant time.
-*
-*  The domain of the function will be determined by the form of
-*  the loop header, and the range by the expression that performs
-*  access to the vectorized variable.
-*/
+// ----- Implementation
+
+// Representation of linear functions
 struct LinearFunc{
- LinearFunc(){};
- LinearFunc(bool isEmpty);
- LinearFunc(int to, int slope, int intercept, bool isEmpty);
+  LinearFunc(){};
+  LinearFunc(int m, int h);
 
- member_(bool, empty);
- member_(int, hi); // Domain
- member_(int, m); // Range
- member_(int, h); // Range
-
- comparable(LinearFunc);
- LinearFunc LFCap(const LinearFunc &other);
+  member_(int, m); 
+  member_(int, h); 
 };
 
-typedef std::vector<LinearFunc> MultiDimLF;
+// Type of domain and range
+struct LFRange : public LinearFunc{
+  LFRange() : LinearFunc(){};
+  LFRange(bool isEmpty);
+  LFRange(int m, int h, int lo, int step, int hi, bool isEmpty);
 
-struct SetVertexLF : public SetVertex{
- SetVertexLF(){};
- SetVertexLF(MultiDimLF vs, std::string name);
+  member_(int, hi);
+  member_(bool, empty);
 
- member_(MultiDimLF, vertices);
-
- comparable(SetVertexLF);
+  LFRange emptySet();
+  bool empty();
+  LFRange cap(const LFRange &set2);
+  LFRange min();
 };
+
+// Type of expression
+struct LFExpr : public LinearFunc{
+  LFExpr() : LinearFunc(){};
+  LFExpr(int m, int h); 
+
+  LFRange applyExpr(LFRange set1);
+  LFExpr compose(const LFExpr &e2);
+  Option<LFExpr> inv();
+  LFExpr constant(LFRange min);
+}; 
+
  
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
@@ -102,43 +160,11 @@ struct SetVertexLF : public SetVertex{
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
 
-struct SetEdge{
- SetEdge(){};
-
- member_(int, card);
- member_(std::string, name); // Used to pretty print
-
- printable(SetEdge);
-};
-
-/// @brief It is a vector since a variable can occur more than once in an equation, we need order
-typedef std::vector<MultiDimLF> EdgeLF;
-
-struct SetEdgeLF : public SetEdge{
- SetEdgeLF(){};
- SetEdgeLF(EdgeLF &es, std::string name, bool inv);
-
- /// @brief For 1_N connections
- member_(bool, invert);
- member_(EdgeLF, edges);
-
- comparable(SetEdgeLF);
-};
 
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
 // Graphs
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
-
-typedef boost::adjacency_list<boost::listS, boost::listS, boost::undirectedS, SetVertex, SetEdge>
- SetBasedGraph;
-typedef SetBasedGraph::vertex_descriptor SetVertexDesc;
-typedef SetBasedGraph::edge_descriptor SetEdgeDesc;
-
-typedef boost::adjacency_list<boost::listS, boost::listS, boost::undirectedS, SetVertexLF, SetEdgeLF>
- SetBasedGraphLF;
-typedef SetBasedGraphLF::vertex_descriptor SetVertexLFDesc;
-typedef SetBasedGraphLF::edge_descriptor SetEdgeLFDesc;
 
 #endif

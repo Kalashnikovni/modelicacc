@@ -26,97 +26,103 @@
 #include <util/debug.h>
 #include <util/graph/graph_definition.h>
 
-// Set vertex
-member_imp(SetVertex, int, card);
-member_imp(SetVertex, int, index);
-member_imp(SetVertex, std::string, name);
+using namespace std;
 
-std::ostream &operator<<(std::ostream &os, const SetVertex &sv){
- os << sv.name();
- return os;
-}
+// LinearFuncs
+LinearFunc::LinearFunc(int m, int h) : m_(m), h_(h){};
 
-// LinearFunc
-LinearFunc::LinearFunc(bool isEmpty) : empty_(isEmpty){};
-
-LinearFunc::LinearFunc(int to, int slope, int intercept, bool isEmpty) :
- m_(slope), h_(intercept), empty_(isEmpty){
- if(to >= 0){
-  set_hi(to);
- }
-
- else
-  std::cerr << "The bounds of the linear func are swapped\n";
-};
-
-member_imp(LinearFunc, bool, empty);
-member_imp(LinearFunc, int, hi);
 member_imp(LinearFunc, int, m);
 member_imp(LinearFunc, int, h);
 
-bool LinearFunc::operator==(const LinearFunc &other) const{
- if(empty() && other.empty())
-  return true;
- else if (!empty() && !other.empty())
-  return (hi() == other.hi() && m() == other.m() && h() == other.h());
- 
- return false;
-}
+// LFRange
+LFRange::LFRange(bool isEmpty) : empty_(isEmpty){};
 
-LinearFunc LinearFunc::LFCap(const LinearFunc &other){
- if(!other.empty() && !empty()){
-  if(other.m() == m() && other.h() == h()){
-   int newEnd = std::min(hi(), other.hi());
-   LinearFunc(newEnd, m(), h(), false); 
+// We "normalize range" to simplify calculations
+LFRange::LFRange(int m, int h, int lo, int step, int hi, bool empty) : empty_(empty){
+  if(step != 0 && lo <= hi && !empty){
+    int newM = m * step;
+    set_m(newM);
+
+    int newH = m * lo + h; 
+    set_h(newH);
+
+    int newHi = (hi - 1) / step;
+    set_hi(newHi); 
   }
 
-  else if(other.m() == m()) return LinearFunc(true);
+  cerr << "Wrong values for subscript" << endl;
+  set_empty(true);
+}
 
-  else{
-   int newM = m() * (other.h() - h()) / (m() - other.m()) + h(); 
-   return LinearFunc(0, newM, 0, false); 
+member_imp(LFRange, int, hi);
+member_imp(LFRange, bool, empty);
+
+LFRange LFRange::emptySet(){
+  return LFRange();
+}
+
+bool LFRange::empty(){
+  return empty(); 
+}
+
+LFRange LFRange::cap(const LFRange &set2){
+  int d1 = -1, d2 = -2, sum = -1, i = 0, k = 0;
+  float j;
+
+  if(m() == 0 && set2.m() == 0 && h() != set2.h())
+    return LFRange(true);
+
+  else if(m() == 0 && set2.m() == 0 && h() == set2.h())
+    return LFRange(1, h(), 0, 1, 1, false);
+
+  else if(set2.m() == 0){
+    float i = (set2.h() - h()) / m();
+
+    if(i == (int)i && i >= 0 && i <= hi() && i <= set2.hi())
+      return LFRange(1, h(), 0, 1, 1, false);
   }
- }
 
- return LinearFunc(true); 
+  while(d1 * d2 < 0 && k < set2.m()){
+    j = (m() * i + h() - set2.h()) / set2.m();
+
+    if(j == (int)j && d1 < 0){
+      d1 = j;
+      sum = j;
+    }
+
+    else if(j == (int)j)
+      d2 = j;
+
+    k++;
+  }
+
+  if(d1 * d2 > 0 )
+    return LFRange(m(), m() * sum + h(), 0, d2 - d1, hi(), false);
+
+  return LFRange(true);
 }
 
-// Set vertices implemented as linear functions
-SetVertexLF::SetVertexLF(MultiDimLF vs, std::string name) : vertices_(vs){
- int n = 1;
- foreach_(LinearFunc lf, vs) n = n * (lf.hi() + 1);
+LFRange LFRange::min(){
+  return LFRange(m(), h(), 0, 1, 1, false);
+}
 
- set_card(n);
- set_name(name);
+// LFExpr
+LFExpr::LFExpr(int m, int h){
+  set_m(m);
+  set_h(h);
 };
 
-member_imp(SetVertexLF, MultiDimLF, vertices);
+LFRange LFExpr::applyExpr(LFRange set1){
+  if(set1.empty())
+    return LFRange(true);
 
-bool SetVertexLF::operator==(const SetVertexLF &other) const {
- return (other.vertices() == vertices());
-}
- 
-// Set Edge
-member_imp(SetEdge, int, card);
-member_imp(SetEdge, std::string, name);
-
-std::ostream &operator<<(std::ostream &os, const SetEdge &se){
- os << se.name();
- return os;
+  return LFRange(m() * set1.m(), m() * set1.h() + h(), 0, 1, set1.hi() + 1, false);
 }
 
-// Set Edge LF
-SetEdgeLF::SetEdgeLF(EdgeLF &es, std::string name, bool inv) : edges_(es), invert_(inv){
- set_name(name);
+LFExpr LFExpr::compose(const LFExpr &e2){
+  return LFExpr(e2.m() * m(), m() * e2.h() + h());
+}
 
- this->card_ref() = 1;
- foreach_(MultiDimLF m, es)
-  foreach_(LinearFunc lf, m)
-   this->card_ref() = this->card_ref() * (lf.hi() + 1);
-};
-
-member_imp(SetEdgeLF, EdgeLF, edges);
-
-bool SetEdgeLF::operator==(const SetEdgeLF &other) const {
- return (other.edges() == edges());
+LFExpr constant(LFRange min){
+  return LFExpr(0, min.h());
 }
