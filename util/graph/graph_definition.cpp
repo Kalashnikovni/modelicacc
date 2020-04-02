@@ -46,7 +46,7 @@ LFRange::LFRange(int m, int h, int lo, int step, int hi, bool empty) : empty_(em
     int newH = m * lo + h; 
     set_h(newH);
 
-    int newHi = (hi - 1) / step;
+    int newHi = (hi - lo) / step;
     set_hi(newHi); 
   }
 
@@ -66,40 +66,52 @@ bool LFRange::empty(){
 }
 
 LFRange LFRange::cap(const LFRange &set2){
-  int d1 = -1, d2 = -2, sum = -1, i = 0, k = 0;
-  float j;
+  int newH = -1, newStep = lcm(m(), set2.m());
+  int endHi = std::min(m() * hi() + h(), set2.m() * set2.hi() + set2.h());
 
-  if(m() == 0 && set2.m() == 0 && h() != set2.h())
-    return LFRange(true);
+  if(!empty() && !set2.empty())
+    for(int i = 0; i < newStep / m(); i++){
+      int res1 = m() * i + h();
+      float res2 = (res1 - set2.h()) / set2.m();
 
-  else if(m() == 0 && set2.m() == 0 && h() == set2.h())
-    return LFRange(1, h(), 0, 1, 1, false);
-
-  else if(set2.m() == 0){
-    float i = (set2.h() - h()) / m();
-
-    if(i == (int)i && i >= 0 && i <= hi() && i <= set2.hi())
-      return LFRange(1, h(), 0, 1, 1, false);
-  }
-
-  while(d1 * d2 < 0 && k < set2.m()){
-    j = (m() * i + h() - set2.h()) / set2.m();
-
-    if(j == (int)j && d1 < 0){
-      d1 = j;
-      sum = j;
+      if(res2 == (int) res2){
+        newH = res1;
+        break;
+      }
     }
 
-    else if(j == (int)j)
-      d2 = j;
+  else
+    return LFRange(true);
 
-    k++;
-  }
+  if(newH < 0)
+    return LFRange(true);
 
-  if(d1 * d2 > 0 )
-    return LFRange(m(), m() * sum + h(), 0, d2 - d1, hi(), false);
+  while(set2.h() > newH)
+    newH += newStep;
 
-  return LFRange(true);
+  int newEnd = newH;
+  while(newEnd < endHi)
+    newEnd += newStep;
+
+  return LFRange(1, newH, 0, newStep, newEnd, false);
+}
+
+int gcd(int a, int b){
+  int c;
+
+  do{
+    c = a % b;
+    if(c > 0){
+      a = b;
+      b = c;
+    }
+  } while (c != 0);
+
+  return b;
+}
+
+int lcm(int a, int b){
+  return (a * b) / gcd(a, b);
 }
 
 LFRange LFRange::min(){
@@ -121,6 +133,13 @@ LFRange LFExpr::applyExpr(LFRange set1){
 
 LFExpr LFExpr::compose(const LFExpr &e2){
   return LFExpr(e2.m() * m(), m() * e2.h() + h());
+}
+
+Option<LFExpr> LFExpr::inv(){
+  if(m() == 0)
+    return Option<LFExpr>();
+
+  return Option<LFExpr>();
 }
 
 LFExpr constant(LFRange min){

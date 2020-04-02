@@ -53,12 +53,7 @@ using boost::variant;
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
 
-// T1 should have some way of applying the expression to domain.
-// Methods T1 should have:
-//  * applyExpr(dom)
-//  * compose(m2)
-//  * mininv()
-
+int lcm(int a, int b);
 
 // First type is the type of expression, second the type of the domain,
 // and finally the type of the image. T2 and T3 should be sets, but 
@@ -127,7 +122,7 @@ struct LinearFunc{
   member_(int, h); 
 };
 
-// Type of domain and range
+// Simple sets
 struct LFRange : public LinearFunc{
   LFRange() : LinearFunc(){};
   LFRange(bool isEmpty);
