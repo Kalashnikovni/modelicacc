@@ -28,72 +28,61 @@
 
 using namespace std;
 
-// LinearFuncs
-LinearFunc::LinearFunc(int m, int h) : m_(m), h_(h){};
 
-member_imp(LinearFunc, int, m);
-member_imp(LinearFunc, int, h);
+// AtomSet
+IntervalImp::IntervalImp(bool isEmpty) : empty_(isEmpty){};
 
-// LFRange
-LFRange::LFRange(bool isEmpty) : empty_(isEmpty){};
-
-// We "normalize range" to simplify calculations
-LFRange::LFRange(int m, int h, int lo, int step, int hi, bool empty) : empty_(empty){
-  if(step != 0 && lo <= hi && !empty){
-    int newM = m * step;
-    set_m(newM);
-
-    int newH = m * lo + h; 
-    set_h(newH);
-
-    int newHi = (hi - lo) / step;
-    set_hi(newHi); 
+IntervalImp::IntervalImp(int lo, int step, int hi, bool empty) 
+  : empty_(empty), lo_(lo), step_(step){
+  if(lo <= hi && !empty){
+    int rem = std::fmod(lo - hi, step); 
+    set_hi(hi - rem); 
   }
 
-  cerr << "Wrong values for subscript" << endl;
-  set_empty(true);
+  else{ 
+    cerr << "Wrong values for subscript" << endl;
+    set_empty(true);
+  }
 }
 
-member_imp(LFRange, int, hi);
-member_imp(LFRange, bool, empty);
+member_imp(IntervalImp, bool, empty);
+member_imp(IntervalImp, int, lo);
+member_imp(IntervalImp, int, step);
+member_imp(IntervalImp, int, hi);
 
-LFRange LFRange::emptySet(){
-  return LFRange();
-}
-
-bool LFRange::empty(){
+bool IntervalImp::empty(){
   return empty(); 
 }
 
-LFRange LFRange::cap(const LFRange &set2){
-  int newH = -1, newStep = lcm(m(), set2.m());
-  int endHi = std::min(m() * hi() + h(), set2.m() * set2.hi() + set2.h());
+IntervalImp IntervalImp::cap(const IntervalImp &inter2){
+  int newStep = lcm(step(), inter2.step()), newLo = -1;
+  int minEnd = std::min(hi(), inter2.hi());
 
-  if(!empty() && !set2.empty())
-    for(int i = 0; i < newStep / m(); i++){
-      int res1 = m() * i + h();
-      float res2 = (res1 - set2.h()) / set2.m();
+  if(!empty() && !inter2.empty())
+    for(int i = 0; i < newStep; i += step()){
+      int res1 = lo() + i;
+      float res2 = (res1 - inter2.lo()) / inter2.step();
 
       if(res2 == (int) res2){
-        newH = res1;
+        newLo = res1;
         break;
       }
     }
 
   else
-    return LFRange(true);
+    return IntervalImp(true);
 
-  if(newH < 0)
-    return LFRange(true);
+  if(newLo < 0)
+    return IntervalImp(true);
 
-  while(set2.h() > newH)
-    newH += newStep;
+  while(inter2.lo() > newLo)
+    newLo += newStep;
 
-  int newEnd = newH;
-  while(newEnd < endHi)
+  int newEnd = newLo;
+  while(newEnd < minEnd)
     newEnd += newStep;
 
-  return LFRange(1, newH, 0, newStep, newEnd, false);
+  return IntervalImp(newLo, newStep, newEnd, false);
 }
 
 int gcd(int a, int b){
@@ -114,21 +103,33 @@ int lcm(int a, int b){
   return (a * b) / gcd(a, b);
 }
 
-LFRange LFRange::min(){
-  return LFRange(m(), h(), 0, 1, 1, false);
+IntervalImp IntervalImp::min(){
+  return IntervalImp(lo(), 1, lo(), false);
 }
 
+std::ostream &operator<<(std::ostream &out, const IntervalImp &inter){
+  out << "[" << inter.lo() << ":" << inter.step() << ":" << inter.hi() << "]";
+  return out;
+}
+
+// LinearFuncs
+LinearFunc::LinearFunc(int m, int h) : m_(m), h_(h){};
+
+member_imp(LinearFunc, int, m);
+member_imp(LinearFunc, int, h);
+
 // LFExpr
+/*
 LFExpr::LFExpr(int m, int h){
   set_m(m);
   set_h(h);
 };
 
-LFRange LFExpr::applyExpr(LFRange set1){
+AtomSet LFExpr::applyExpr(AtomSet set1){
   if(set1.empty())
-    return LFRange(true);
+    return AtomSet(true);
 
-  return LFRange(m() * set1.m(), m() * set1.h() + h(), 0, 1, set1.hi() + 1, false);
+  return AtomSet(m() * set1.m(), m() * set1.h() + h(), 0, 1, set1.hi() + 1, false);
 }
 
 LFExpr LFExpr::compose(const LFExpr &e2){
@@ -142,6 +143,6 @@ Option<LFExpr> LFExpr::inv(){
   return Option<LFExpr>();
 }
 
-LFExpr constant(LFRange min){
+LFExpr constant(AtomSet min){
   return LFExpr(0, min.h());
-}
+}*/
