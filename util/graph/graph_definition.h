@@ -23,7 +23,7 @@
 *   classes that describe mathematical entities,
 *   such as sets, graphs, etc.
 *   If implementation has to change, a new concrete
-*   classes can be defined, but the client modules
+*   class can be defined, but the client modules
 *   of graph_definition will call abstract classes,
 *   so no change is needed in the rest of the compiler.
 *   Through typename template the abstract class uses
@@ -116,6 +116,17 @@ struct IntervalImp1{
     return empty;
   }
 
+  bool isIn(int x){
+    if(x > lo || x < hi)
+      return false;
+
+    float aux = (x - lo) / step;
+    if(aux == (int) aux)
+      return true;
+
+    return false;
+  } 
+
   IntervalImp1 cap(const IntervalImp1 &inter2){
     int newStep = lcm(step(), inter2.step()), newLo = -1;
     int minEnd = std::min(hi(), inter2.hi());
@@ -197,17 +208,17 @@ struct IntervalImp1{
 };
 
 // Represents the cartesian product of its elements
-template <template<typename T1, typename = allocator<T1>> class CT,
-          typename Data>
+template <template<typename T, typename = allocator<T>> class CT,
+          typename IntervalImp>
 struct MultiInterImp1{
-  CT<Data> inters;
-  typedef typename CT<Data>::iterator intImpIt;
+  CT<IntervalImp> inters;
+  typedef typename CT<IntervalImp>::iterator intImpIt;
 
   MultiInterImp1(){
-    CT<Data> emptyRes;
+    CT<IntervalImp> emptyRes;
     inters = emptyRes;  
   }
-  MultiInterImp1(CT<Data> is){
+  MultiInterImp1(CT<IntervalImp> is){
     inters = is;
   }
 
@@ -215,73 +226,76 @@ struct MultiInterImp1{
     return inters.empty();
   }
 
-  CT<Data> ints(){
+  CT<IntervalImp> ints(){
     return inters;
-  };
+  }
 
   MultiInterImp1 cap(MultiInterImp1 &mi2){
-    CT<Data> res;
+    CT<IntervalImp> res;
     intImpIt itres = res.begin();
 
-    intImpIt it1 = ints().begin();
-    intImpIt it2 = mi2.ints().begin();
+    intImpIt it1 = inters.begin();
+    intImpIt it2 = mi2.inters().begin();
     int minLength = std::min(inters.size(), mi2.inters.size());
     for(int i = 0; i < minLength; i++){
-      Data capres = (*it1).cap(*it2);
+      IntervalImp capres = (*it1).cap(*it2);
 
       if(capres.empty()){
-        CT<Data> emptyRes;
-        return MultiInterImp1<CT, Data>(emptyRes);
+        CT<IntervalImp> emptyRes;
+        return MultiInterImp1<CT, IntervalImp>(emptyRes);
       }
       
-      else
-        itres = res.insert(itres, capres);
+      itres = res.insert(itres, capres);
+      ++itres;
 
       ++it1;
       ++it2;    
     }
 
-    return MultiInterImp1<CT, Data>(res);
+    return MultiInterImp1<CT, IntervalImp>(res);
   }
 
-  CT<MultiInterImp1<CT, Data>> diff(MultiInterImp1 &mi2){
-    MultiInterImp1<CT, Data> capres = cap(mi2);
+  CT<MultiInterImp1<CT, IntervalImp>> diff(MultiInterImp1 &mi2){
+    MultiInterImp1<CT, IntervalImp> capres = cap(mi2);
 
     if(capres.empty()){
-      CT<MultiInterImp1<CT, Data>> emptyRes;
+      CT<MultiInterImp1<CT, IntervalImp>> emptyRes;
       return emptyRes;
     }
 
-    CT<MultiInterImp1<CT, Data>> res1;
-    typename CT<MultiInterImp1<CT, Data>>::iterator itres1 = res1.begin();
+    CT<MultiInterImp1<CT, IntervalImp>> res1;
+    typename CT<MultiInterImp1<CT, IntervalImp>>::iterator itres1 = res1.begin();
 
-    intImpIt it1 = ints().begin();
-    intImpIt itcap = capres.ints().begin();
+    intImpIt it1 = inters.begin();
+    intImpIt itcap = capres.inters.begin();
 
-    for(int i = 0; i < ints().size(); i++){
-      CT<Data> res2;
+    for(int i = 0; i < inters.size(); i++){
+      CT<IntervalImp> res2;
       intImpIt itres2 = res2.begin();
 
-      intImpIt it11 = ints().begin();
+      intImpIt it11 = inters.begin();
 
-      for(int j = 0; j < ints().size(); j++){
-        int i1 = std::distance(ints().begin(), it1), i11 = std::distance(ints().begin(), it11);
+      for(int j = 0; j < inters().size(); j++){
+        int i1 = std::distance(inters().begin(), it1), i11 = std::distance(inters().begin(), it11);
 
         if(i1 < i11)
           it11 = res2.insert(itres2, *itcap);
 
         else if(i1 == i11){
-          CT<Data> diffres = diff(*it1, *itcap);
-          typename CT<Data>::iterator taux = diffres.begin();
+          CT<IntervalImp> diffres = diff(*it1, *itcap);
+          typename CT<IntervalImp>::iterator taux = diffres.begin();
           while(taux != diffres.end())
             it11 = res2.insert(itres2, *taux);
         }
 
         else if(i1 > i11)
           it11 = res2.insert(itres2, *it11);
+
+        ++it11;
       }
 
       itres1 = res1.insert(itres1, res2);
+      ++itres1;
 
       ++itcap;
     }
@@ -290,52 +304,56 @@ struct MultiInterImp1{
   }
 };
 
-template <template <typename T1, typename = allocator<T1>> class CT,
-          typename DataImp1,
-          typename DataImp2>
+template <template <typename T, typename = allocator<T>> class CT,
+          typename MultiInterImp, typename IntervalImp>
 struct MultiInterAbs{
-  typedef CT<DataImp1> CTData;
-  CTData inters;
-  typedef typename CTData::iterator intImpIt;
-
-  MultiInterAbs(){
-    CTData emptyRes;
-    inters = emptyRes;
-  };
-  MultiInterAbs(CTData is){
-    inters = is;
+  MultiInterAbs(){};
+  MultiInterAbs(MultiInterImp d){
+    multiInterImp = d;
   };
 
   bool empty(){
     return multiInterImp.empty();
   };
 
-  CT<DataImp1> ints(){
-    return multiInterImp.ints();
-  };
+  CT<IntervalImp> ints(){
+    return multiInterImp.inters();
+  }
 
   MultiInterAbs cap(MultiInterAbs &mi2){
-    return multiInterImp.cap(mi2.multiInterImp);
+    return MultiInterAbs(multiInterImp.cap(mi2.multiInterImp));
   };
 
-  CT<MultiInterAbs<CT, DataImp1, DataImp2>> diff(MultiInterAbs &mi2){
-    return multiInterImp.diff(mi2.multiInterImp);
+  CT<MultiInterAbs<CT, MultiInterImp, IntervalImp>> diff(MultiInterAbs &mi2){
+    CT<MultiInterImp> diffRes = multiInterImp.diff(mi2.multiInterImp);
+    typename CT<MultiInterImp>::iterator it = diffRes.begin();
+    CT<MultiInterImp> res;
+    typename CT<MultiInterImp>::iterator itres = res.begin();
+
+    while(it != diffRes.end()){
+      itres = res.insert(itres, MultiInterAbs(*it));
+      ++itres;
+
+      ++it;
+    }
+
+    return res;
   };
 
   private:
-  DataImp2 multiInterImp;
+  MultiInterImp multiInterImp;
 };
 
 template <template<typename T1, typename = allocator<T1>> class CT,
-          typename DataImp>
+          typename MultiInterImp>
 struct AtomSetImp1{
-  DataImp aset;
+  MultiInterImp aset;
 
   AtomSetImp1(){
-    DataImp emptyRes();
+    MultiInterImp emptyRes();
     aset = emptyRes;
   };
-  AtomSetImp1(DataImp as){
+  AtomSetImp1(MultiInterImp as){
     aset = as;
   }
 
@@ -343,23 +361,27 @@ struct AtomSetImp1{
     return aset.empty();  
   }
 
+  MultiInterImp as(){
+    return aset;
+  }
+
   AtomSetImp1 cap(const AtomSetImp1 &aset2){
     return AtomSetImp1(aset.cap(aset2.aset));
   }
 
-  CT<AtomSetImp1<CT, DataImp>> diff(const AtomSetImp1 &aset2){
-    CT<AtomSetImp1<CT, DataImp>> res;
-    typename CT<AtomSetImp1<CT, DataImp>>::iterator itres = res.begin();
+  CT<AtomSetImp1<CT, MultiInterImp>> diff(const AtomSetImp1 &aset2){
+    CT<AtomSetImp1<CT, MultiInterImp>> res;
+    typename CT<AtomSetImp1<CT, MultiInterImp>>::iterator itres = res.begin();
 
-    CT<DataImp> atomicDiff = aset.diff(aset2);
+    CT<MultiInterImp> atomicDiff = aset.diff(aset2);
 
     if(atomicDiff.empty()){
-      CT<AtomSetImp1<CT, DataImp>> emptyRes;
+      CT<AtomSetImp1<CT, MultiInterImp>> emptyRes;
       return emptyRes;
     } 
 
     else{
-      typename CT<DataImp>::iterator it = atomicDiff.begin();
+      typename CT<MultiInterImp>::iterator it = atomicDiff.begin();
       for(int i = 0; i < atomicDiff.size(); i++)
         itres = res.insert(AtomSetImp1(*it)); 
     }
@@ -368,17 +390,11 @@ struct AtomSetImp1{
   }
 };
 
-template <template<typename T1, typename = allocator<T1>> class CT,
-          typename DataImp1,
-          typename DataImp2>
+template <template<typename T, typename = allocator<T>> class CT,
+          typename ASetImp, typename MultiInterImp>
 struct AtomSetAbs{
-  DataImp1 aset;
-
-  AtomSetAbs(){
-    DataImp1 emptyRes();
-    aset = emptyRes;
-  };
-  AtomSetAbs(DataImp1 as){
+  AtomSetAbs(){};
+  AtomSetAbs(ASetImp as){
     aset = as;
   }
 
@@ -386,24 +402,41 @@ struct AtomSetAbs{
     return aset.empty();  
   }
 
-  DataImp2 cap(const DataImp2 &aset2){
-    return aset.cap(aset2.aset);
+  MultiInterImp as(){
+    return aset.as();
   }
 
-  CT<DataImp2> diff(const DataImp2 &aset2){
-    return aset.diff(aset2.aset);
+  AtomSetAbs cap(const AtomSetAbs &aset2){
+    return AtomSetAbs(aset.cap(aset2.aset));
   }
+
+  CT<AtomSetAbs<CT, ASetImp, MultiInterImp>> diff(const AtomSetAbs &aset2){
+    CT<ASetImp> diffRes = aset.diff(aset2.aset);
+    typename CT<ASetImp>::iterator it = diffRes.begin();
+    CT<ASetImp> res;
+    typename CT<ASetImp>::iterator itRes = res.begin();
+
+    while(it != diffRes.end()){
+      itRes = res.insert(itRes, AtomSetAbs(*it));
+
+      ++it;
+    }
+
+    return res;
+  }
+
+  private:
+  ASetImp aset;
 };
 
-/*
-// T1 should be an iterative type, e.g: lists, arrays, etc
 template <template<typename T1, typename = std::allocator<T1>> class CT,
-          typename Data>
-struct SetAbs{
-  typedef CT<Data> setType;
+          typename ASetImp>
+struct SetImp1{
+  typedef CT<ASetImp> setType;
+  setType sets;
  
-  SetAbs(){};
-  SetAbs(setType ss){
+  SetImp1(){};
+  SetImp1(setType ss){
     sets = ss;
   };
 
@@ -420,14 +453,18 @@ struct SetAbs{
     return true;
   }
 
-  SetAbs addAtomSet(const Data &aset2){
+  setType asets(){
+    return sets;
+  }
+
+  SetImp1 addAtomSet(const ASetImp &aset2){
     typename setType::iterator itsets = sets.begin();
 
     sets.insert(itsets, aset2);
-    return SetAbs(sets);
+    return SetImp1(sets);
   }
 
-  SetAbs addAtomSets(const setType &sets2){
+  SetImp1 addAtomSets(const setType &sets2){
     setType res;
     typename setType::iterator it2 = sets2.begin();
 
@@ -439,7 +476,7 @@ struct SetAbs{
     return res;
   }
 
-  SetAbs cap(const SetAbs &set2){
+  SetImp1 cap(const SetImp1 &set2){
     if(empty() || set2.empty()){
       setType emptyRes;
       return emptyRes; 
@@ -463,9 +500,9 @@ struct SetAbs{
     return res;
   }
 
-  SetAbs diff(const SetAbs &set2){
-    CT<Data> emptyCT;
-    SetAbs res(emptyCT);
+  SetImp1 diff(const SetImp1 &set2){
+    CT<ASetImp> emptyCT;
+    SetImp1 res(emptyCT);
     setType setCap = cap(set2); 
 
     if(!setCap.empty()){
@@ -501,120 +538,246 @@ struct SetAbs{
     return res; 
   }
 
-  SetAbs cup(const SetAbs &set2){
-    SetAbs res = *this;
-    SetAbs resDiff = diff(set2);
+  SetImp1 cup(const SetImp1 &set2){
+    SetImp1 res = *this;
+    SetImp1 resDiff = diff(set2);
 
     if(!resDiff.empty())
       res.addAtomSets(resDiff);
 
     return res;
   }
-
-  private:
-  setType sets;
 };
 
 template <template<typename T1, typename = std::allocator<T1>> class CT,
-          typename Data>
-struct LinearMapAbs{
-  typedef CT<int> CTInt;
+          typename SetImp, typename ASetImp>
+struct SetAbs{
+  SetAbs(){};
+  SetAbs(SetImp ss){
+    set = ss;
+  };
+
+  bool empty(){
+    return set.empty(); 
+  }
+
+  CT<ASetImp> asets(){
+    return set.asets();
+  }
+
+  SetImp addAtomSet(const ASetImp &aset2){
+    return SetAbs(set.addAtomSet(aset2)); 
+  }
+
+  SetImp addAtomSets(const CT<ASetImp> &sets2){
+    return SetAbs(set.addAtomSets(sets2));
+  }
+
+  SetImp cap(const SetImp &set2){
+    return SetAbs(set.cap(set2));
+  }
+
+  SetImp diff(const SetImp &set2){
+    return SetAbs(set.diff(set2)); 
+  }
+
+  SetImp cup(const SetImp &set2){
+    return SetAbs(set.cup(set2));
+  }
+
+  private:
+  SetImp set;
+};
+
+template <template<typename T, typename = std::allocator<T>> class CT,
+          typename>
+struct LExprImp1{
+  float m;
+  float h;
+
+  LExprImp1(){};
+  LExprImp1(float mm, float hh){
+    m = mm;
+    h = hh;
+  }
+
+  LExprImp1 compose(LExprImp1 &le2){
+    float newM = le2.m * m;
+    float newH = m * le2.h + h;
+
+    return LExprImp1(newM, newH);
+  }
+
+  LExprImp1 invExpr(){
+    float newM, newH;
+
+    if(m != 0){
+      newM = m;
+      newH = -h / m;
+      return LExprImp1(newM, newH);
+    }
+
+    cerr << "The expression is no injective";
+    return LExprImp1();
+  }
+};
+
+// TODO: abstract class!
+
+template <template<typename T, typename = std::allocator<T>> class CT,
+          typename LExprImp, typename IntervalImp>
+struct LMIntImp1{
+  IntervalImp dom;
+  LExprImp expr;
+
+  LMIntImp1(){};
+  LMIntImp1(IntervalImp d, LExprImp e){
+    dom = d;
+    expr = e;
+  }
+
+  IntervalImp image(){
+    int newLo = expr.m() * dom.lo() + expr.h();
+    int newStep = expr.m() * dom.step();
+    int newHi = expr.m() * dom.hi() + expr.h();
+
+    IntervalImp res(newLo, newStep, newHi, false);
+    return res;    
+  }
+
+  LMIntImp1 compose(LMIntImp1 &lm2){
+    IntervalImp newDom;
+    LExprImp newExpr = expr.compose(lm2.expr);
+
+    if(lm2.m() == 0){
+      if(dom.isIn(lm2.h()))
+        newDom = lm2.dom;
+    }
+
+    else{
+      LMIntImp1 invLMInt(lm2.image(), lm2.invExpr()); 
+      newDom = invLMInt.dom();
+    }
+
+    return LMIntImp1(newDom, newExpr);
+  }
+
+  LMIntImp1 miniInv(){
+    IntervalImp newDom;
+    LExprImp newExpr;
+
+    if(expr.m == 0){
+      newDom = image();
+      newExpr = LExprImp(0, dom.lo()); 
+    }
+
+    else{
+      newDom = image();
+      newExpr = expr.invExpr();
+    }
+
+    return LMIntImp1(newDom, newExpr);
+  }
+};
+
+// TODO: abstract class!
+
+/*
+  MultiInterImp applyExprMI(){
+    int mss = ms.size();
+    int hss = hs.size();
+
+    if(mss > 0 && hss > 0 && mss == hss){
+      CT<IntervalImp> dints = dom.ints();
+      if(mss > dints.size()){
+        int newLo, newStep, newHi;
+
+        typename CT<IntervalImp>::iterator it = dints.begin();
+        typename CTFloat::iterator itm = ms.begin();
+        typename CTFloat::iterator ith = hs.begin();
+
+        CT<IntervalImp> res;
+        typename CT<IntervalImp>::iterator itres = res.begin(); 
+     
+        if(*itm == (int) ((*itm) * (*it.step))){ 
+          while(it != dints.end()){ 
+            newLo = (*it).lo * (*itm) + (*ith);
+            newHi = (*it).hi * (*itm) + (*ith); 
+
+            if(*itm > 0)
+              newStep = (*it).step * (*itm); 
+
+            else
+              newStep = 1;
+
+            IntervalImp intRes(newLo, newStep, newHi, false);
+            itres = res.insert(itRes, intRes);
+            ++itres;
  
-  CTInt ms;
-  CTInt hs;
+            ++it;
+          }
 
-  LinearMapAbs(){};
-  LinearMapAbs(CTInt m, CTInt h){
-    ms = m;
-    hs = h;
-  }
+          return MultiInterImp(res);
+        }
 
-  Data applyExprInt(Data x){
-    if(ms.size() > 0 && hs.size() > 0){
-      int m1 = *(ms.begin()); 
-      int h1 = *(hs.begin());
-      int newLo, newStep, newHi;
-
-      if(m1 > 0){
-        newLo = x.lo * m1 + h1;
-        newStep = x.step * m1; 
-        newHi = x.hi * m1 + h1; 
+        else
+          cerr << "Linear map slope is not compatible";
       }
-
-      else{
-        newLo = h1;
-        newStep = 1;
-        newHi = h1;
-      }
-
-      return Data(newLo, newStep, newHi, false);
-    }
-  }
-
-  CTInt applyExpr(CTInt x){
-    CTInt res();
-    typename CTInt::iterator itres = res.begin();
-    typename CTInt::iterator it = x.begin();
-    typename CTInt::iterator itm = ms.begin();
-    typename CTInt::iterator ith = hs.begin();
-
-    if(x.size() <= ms.size() && x.size() <= hs.size())
-      while(it != x.end()){
-        int y = (*itm) * (*it) + (*ith);
-        ++itm;
-        ++ith;
-        itres = res.insert(itres, y);
-      
-        ++it;
-      }
-
-    return res;
-  }
-
-  AtomSetAbs<CT, Data> atomImage(const AtomSetAbs<CT, Data> &atomSet){
-    CT<Data> res;
-    typename CT<Data>::iterator itres = res.begin();
-    typename CT<Data>::iterator it = atomSet.aset.inters.begin();  
-
-    while(it != atomSet.aset.inters.end()){
-      Data newInt = applyExprInt(*it);
-      itres = res.insert(itres, newInt);
-
-      ++it;
     }
 
-    MultiInterAbs<CT, Data> newRes(res); 
-    return AtomSetAbs<CT, Data>(newRes);
+    cerr << "Expression dimension should be larger than domain dimension";
+    return MultiInterImp();
   }
 
-  SetAbs<CT, Data> image(const SetAbs<CT, Data> &set){
-    SetAbs<CT, Data> res();
+  IntervalImp domCompInt(IntervalImp &int2){
+  }*/
 
-    if(!set.empty()){
-      CT<AtomSetAbs<CT, Data>> doms = set.sets;
-      typename CT<AtomSetAbs<CT, Data>>::iterator itDoms = doms.begin();
+  /*
+  MultiInterImp domComp(LinearMapImp1 &lm2){
+    CT<IntervalImp> mi1 = dom.ints();
+    typename CT<IntervalImp>::iterator itdom1 = mi1.begin();
+    CT<IntervalImp> mi2 = lm2.dom.ints();
+    typename CT<IntervalImp>::iterator itdom2 = mi2.begin();
 
-      while(itDoms != doms.end()){
-        AtomSetAbs<CT, Data> atomIm = atomImage(*itDoms); 
-        SetAbs<CT, Data> im(atomIm);
-        res = res.cup(res, im);    
+    typename CTFloat::iterator itms1 = ms.begin();
+    typename CTFloat::iterator iths1 = hs.begin();
+    typename CTFloat::iterator itms2 = lm2.ms.begin();
+    typename CTFloat::iterator iths2 = lm2.hs.begin();
+    
+    MultiInterImp im = applyExprMI();
+    typename CT<IntervalImp>::iterator itim = im.ints().begin();
+
+    CT<IntervalImp> res;
+    typename CT<IntervalImp>::iterator itres = res.begin();
+
+    while(itdom2 != mi2.end()){
+      if(*itms2 == 0){
+        // Check if it is in lm1 domain
+        if(*itdom1.isIn(*iths2)){
+          itres = res.insert(itres, *itdom2);
+          ++itres;
+        }
+      }
   
-        itDoms++;
+      else{
+        IntervalImp aux = (*itim).cap(*itdom1);
+        
       }
-    }
 
-    return res;
+      ++itdom1;
+      ++itdom2;
+    }
   }
 
-  LinearMapAbs compose(const LinearMapAbs &le2){
-    typename CTInt::iterator it1ms = ms.begin(); 
-    typename CTInt::iterator it1hs = hs.begin(); 
-    typename CTInt::iterator it2ms = le2.ms.begin(); 
-    typename CTInt::iterator it2hs = le2.hs.begin(); 
-    CTInt msres;
-    CTInt hsres;
-    typename CTInt::iterator itResms = msres.begin(); 
-    typename CTInt::iterator itReshs = hsres.begin(); 
+  LinearMapImp1 compose(const LinearMapImp1 &lm2){
+    typename CTFloat::iterator it1ms = ms.begin(); 
+    typename CTFloat::iterator it1hs = hs.begin(); 
+    typename CTFloat::iterator it2ms = lm2.ms.begin(); 
+    typename CTFloat::iterator it2hs = lm2.hs.begin(); 
+    CTFloat msres;
+    CTFloat hsres;
+    typename CTFloat::iterator itResms = msres.begin(); 
+    typename CTFloat::iterator itReshs = hsres.begin(); 
 
     int len = min(ms.size(), le2.ms.size());
     for(int i = 0; i < len; i++){
@@ -627,17 +790,108 @@ struct LinearMapAbs{
       ++it2hs;
     }
 
-    return LinearMapAbs(msres, hsres);
+    return LinearMapImp1(msres, hsres);
   }
 };
 
-template <typename setType, typename exprType>
-struct MapAbs{
-  setType dom;
-  exprType expr;
+template <template<typename T, typename = std::allocator<T>> class CT,
+          typename LinearMapImp, typename SetImp, typename ASetImp, typename MultiInterImp,
+          typename NumImp>
+struct LinearMapAbs{
+  LinearMapAbs(){};
+  LinearMapAbs(LinearMapImp lm){
+    lmap = lm;
+  }
 
-  MapAbs(){}
-  MapAbs(setType d, exprType e){
+  NumImp slopes(){
+    return lmap.slopes;
+  }
+
+  NumImp intercepts(){
+    return lmap.intercepts();
+  }
+
+  MultiInterImp applyExprMI(MultiInterImp x){
+    return lmap.applyExprMI(x);
+  }
+
+  ASetImp applyExprAS(ASetImp x){
+    return lmap.applyExprAS(x);
+  }
+
+  SetImp applyExpr(SetImp x){
+    return lmap.applyExpr(x);
+  }
+
+  LinearMapAbs compose(const LinearMapAbs &le2){
+    return LinearMapAbs(lmap.compose(le2));
+  }
+
+  LinearMapAbs invLMap(){
+    return LinearMapAbs(lmap.invLMap());
+  }
+
+  private:
+  LinearMapImp lmap;
+};
+*/
+/*
+  ASetImp applyExprAS(ASetImp x){
+    MultiInterImp mi = x.as();
+
+    return ASetImp(applyExpr(mi));
+  }
+
+  SetImp applyExpr(SetImp x){
+    CT<ASetImp> ass = x.asets();       
+    typename CT<ASetImp>::iterator it = ass.begin();
+
+    SetImp res;
+
+    while(it != ass.end()){
+     SetImp auxs(applyExprAS(*it));
+     res = res.cup(auxs);
+
+     ++it;
+    }
+
+    return res;
+  } 
+  */
+/*
+  ASetImp applyExprAS(ASetImp x){
+    MultiInterImp mi = x.as();
+
+    return ASetImp(applyExpr(mi));
+  }
+
+  SetImp applyExpr(SetImp x){
+    CT<ASetImp> ass = x.asets();       
+    typename CT<ASetImp>::iterator it = ass.begin();
+
+    SetImp res;
+
+    while(it != ass.end()){
+     SetImp auxs(applyExprAS(*it));
+     res = res.cup(auxs);
+
+     ++it;
+    }
+
+    return res;
+  } 
+  */
+
+/// @brief Careful! This class exploit linear maps's properties. 
+ /*
+template <template<typename T, typename = allocator<T>>, 
+          typename LMapImp, SetImp>
+struct PWLMapImp1{
+  CT<SetImp> dom;
+  CT<LMapImp> expr;
+
+  PWLMapImp1(){}
+  PWLMapImp1(CT<SetImp> d, CT<LMapImp> e){
     if(d.size() == e.size()){
       dom = d;
       expr = e; 
@@ -647,14 +901,76 @@ struct MapAbs{
       cerr << "Domain and maps should have the same size";
   }
 
-  MapAbs compose(const MapAbs &m2){
-    setType newDom =   
-    exprType newExp = expr.compose(m2.expr);
+  SetImp PWLImage(SetImp x){
+    SetImp res;
 
-    return MapAbs(newDom, newExp);
-  }*/
+    typename CT<SetImp>::iterator itdom = dom.begin();
+    typename CT<LMapImp>::iterator itexpr = expr.begin();
+
+    while(itdom != dom.end()){
+      SetImp auxs = x.cap(*itdom);
+      res = res.cup((*itexpr).applyExpr(auxs));
+      
+      ++itdom;
+      ++itexpr;
+    }
+
+    return res;
+  }
+
+  PWLMapImp1 compose(const PWLMapImp1 &m2){
+    CT<SetImp> newDom;
+    typename CT<SetImp>::iterator itnewdom = newDom.begin();   
+    CT<LMapImp> newExpr;
+    typename CT<LMapImp>::iterator itnewexpr = newExpr.begin();
+
+    typename CT<SetImp>::iterator itdom1 = dom.begin();
+    typename CT<SetImp>::iterator itdom2 = m2.dom.begin();
+    typename CT<LMapImp>::iterator itexpr1 = expr.begin();
+    typename CT<LMapImp>::iterator itexpr2 = m2.expr.begin();
+
+    while(itexpr1 != expr.end()){
+      while(itexpr2 != m2.expr.end()){
+        LMapImp invExpr = m2.expr.invLMap();
+
+        NumImp ms = invExpr.slopes;
+        NumImp hs = invExpr.intercepts();
+        typename NumImp::iterator itms = ms.begin()
+        typename NumImp::iterator iths = hs.begin()
+
+        NumImp msRes;
+        NumImp hsRes;
+        typename NumImp::iterator itmsres = msRes.begin();
+        typename NumImp::iterator ithsres = hsRes.begin();
+
+        SetImp domRes;
+
+        // Domain calculus
+        while(itms != ms.end()){
+          if(*itms == 0){
+            // Image of m2 is in dom of m1?
+            bool auxCond = ((*itexpr2).applyExpr(*itdom2)).cap(*itdom1)  
+            if(auxCond){
+            }
+          }
+
+          else{
+          }
+
+          ++itms;
+          ++iths;
+        }
+
+        // Expression calculus
+
+        ++itdom;
+        ++itexpr;
+      }
+    }
+
+    return MapImp1(newDom, newExp);
+  }
  
-/*
   setData preImage(setData set1){
     Option<T2> preSet = expr.inv(set1);
     T2 newSet1;
@@ -666,15 +982,7 @@ struct MapAbs{
 
     return newSet1;
   }
-  MapAbs compose(const MapAbs &m2){
-    T1 eres = expr.compose(m2.expr());    
-    T2 dres = m2.preImage(dom.cap(m2.image(m2.dom())));
 
-    return MapAbs(eres, dres);
-  }
-*/
-
- /*
   MapAbs mininv(){
     Option<T1> opExpr = expr.inv();
     T1 eres;
@@ -718,14 +1026,8 @@ struct MapAbs{
 /*-----------------------------------------------------------------------------------------------*/
 
 typedef IntervalImp1<list> Interval;
-typedef MultiInterAbs<list, Interval, MultiInterImp1<list, Interval>> MultiInterval;
-typedef AtomSetAbs<list, MultiInterval, MultiInterImp1<list, Interval>> AtomSet;
-//typedef AtomSetAbs<list, MultiInterval> AtomSet;
-//typedef SetAbs<list, AtomSet> Set;
-// --> typedef SetAbs<list, AtomSetNew> Set;
-
-//typedef LinearMapAbs<list, Interval> LinearMap;
-
-
+typedef MultiInterAbs<list, MultiInterImp1<list, Interval>, Interval> MultiInterval;
+typedef AtomSetAbs<list, AtomSetImp1<list, MultiInterval>, MultiInterval> AtomSet;
+typedef SetAbs<list, SetImp1<list, AtomSet>, AtomSet> Set;
 
 #endif
