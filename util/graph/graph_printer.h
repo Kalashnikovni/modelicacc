@@ -16,7 +16,6 @@
     along with Modelica C Compiler.  If not, see <http://www.gnu.org/licenses/>.
 
 ******************************************************************************/
-
 #include <list>
 #include <iostream>
 #include <fstream>
