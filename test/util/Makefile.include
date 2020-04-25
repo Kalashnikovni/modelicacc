@@ -1,17 +1,11 @@
-OBJS_TEST_UTIL := $(OBJS_COMMON) \
-            causalize/compref_occurrence.o \
-            util/type_check.o \
-            mmo/mmo_class.o \
-            util/ast_util.o \
-            util/symbol_table.o \
-            util/debug.o \
-            util/type.o \
-            test/util/EvalExpTest.o
+all: test/util/GraphTest
+SRC_TEST_UTIL := test/util/GraphTest.cpp 
 
-LIB_TEST = -lboost_unit_test_framework
+OBJS_TEST_UTIL= $(SRC_TEST_UTIL:.cpp=.o)
+-include $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRC_TEST_UTIL)))
 
-test/util/EvalExpTest: $(OBJS_TEST_UTIL)
-	$(CXX) $(CXXFLAGS) -o test/util/EvalExpTest $(OBJS_TEST_UTIL) $(LIB_TEST)
+test/util/GraphTest: $(OBJS_TEST_UTIL)
+	$(CXX) $(CXXFLAGS) -o test/util/GraphTest $(OBJS_TEST_UTIL) $(LIB_TEST)
 
 
 
