@@ -1,4 +1,14 @@
-To test this stage run the following command replacing filename with the name
-of the desired file that is in the current directory:
+Rather than providing a test-suite a parsed-expression printer is provided, since
+the parsed-expression of a program could be quite large. Is up to the user to
+check if parsing is ok or not.
 
-../../bin/parse ./filename
+To print the result of parsing in only one file execute the following command
+in the current directory:
+
+../../bin/parse filenamewithpath
+
+where filenamewithpath is the complete path to the modelica file.
+
+To print the result of parsing of every file in directory ../mccprograms:
+
+./parse 

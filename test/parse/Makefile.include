@@ -1,5 +1,5 @@
 all: test/parse/parse 
-SRC_PARSER_TEST := test/parse/test_parse.cpp \
+SRC_PARSER_TEST := test/parse/print_parse.cpp \
     parser/statement.cpp \
     util/debug.cpp \
     parser/class.cpp \

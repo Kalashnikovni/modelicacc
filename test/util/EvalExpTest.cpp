@@ -3,9 +3,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/test/included/unit_test.hpp>
 
-#include <ast/ast_builder.h>
 #include <ast/expression.h>
-#include <util/ast_util.h>
 
 using namespace boost::unit_test;
 
