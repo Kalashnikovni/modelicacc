@@ -982,6 +982,37 @@ void TestSetCap3(){
   BOOST_CHECK(res1 == res2 && res2 == res3);
 }
 
+void TestSetDiff1(){
+  Interval i1(0, 1, 10, false);
+  Interval i2(0, 3, 9, false);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+
+  AtomSet as1(mi1);
+
+  Set s1;
+  s1.addAtomSet(as1);
+
+  Interval i3(20, 1, 25, false);
+  Interval i4(30, 3, 43, false);
+
+  MultiInterval mi2;
+  mi2.addInter(i3);
+  mi2.addInter(i4);
+
+  AtomSet as2(mi2);
+
+  Set s2;
+  s2.addAtomSet(as2);
+ 
+  Set res1 = s1.diff(s2); 
+  Set res2;
+
+  BOOST_CHECK(res1 == res2);
+}
+
 //____________________________________________________________________________//
 
 test_suite *init_unit_test_suite(int, char *[]){
@@ -1031,6 +1062,7 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetCap1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetCap2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetCap3));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetDiff1));
 
   return 0;
 }

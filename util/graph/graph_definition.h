@@ -50,8 +50,6 @@
 #include <ast/equation.h>
 #include <util/table.h>
 
-namespace ICL = boost::icl;
-using boost::variant;
 using namespace std;
 
 #define Inf numeric_limits<int>::max()
@@ -664,7 +662,7 @@ struct SetImp1{
   }
 
   void addAtomSets(setType &sets2){
-    setType res;
+    SetImp1 res;
     typename setType::iterator it2 = sets2.begin();
 
     while(it2 != sets2.end()){
@@ -700,35 +698,33 @@ struct SetImp1{
   }
 
   SetImp1 diff(SetImp1 &set2){
-    CT<ASetImp> emptyCT;
-    SetImp1 res(emptyCT);
-    setType setCap = cap(set2); 
+    SetImp1 res;
+    setType capres = cap(set2).asets; 
 
-    if(!setCap.empty()){
+    if(!capres.empty()){
       typename setType::iterator it1 = asets.begin();
 
       while(it1 != asets.end()){
-        setType asets2;
-        it1 = insert(it1, *it1);
-        typename setType::iterator itasets2 = asets2.begin();
+        setType aux(1, *it1);
  
-        typename setType::iterator it2 = setCap.begin();
-        while(it2 != setCap.end()){
-          setType newSet;
-          typename setType::iterator itnew = newSet.begin();
+        typename setType::iterator it2 = capres.begin();
+        while(it2 != capres.end()){
+          SetImp1 newSets;
 
-          while(itasets2 != asets2.end()){
-            itnew = newSet.insert(itnew, *itasets2.diff(*it2));
+          typename setType::iterator itaux = aux.begin();
+          while(itaux != aux.end()){
+            setType diffres = (*itaux).diff(*it2);
+            newSets.addAtomSets(diffres);
 
-            ++itasets2;
+            ++itaux;
           }
 
-          asets2 = newSet;
+          aux = newSets.asets;
 
           ++it2;
         }
 
-        res.addAtomSets(asets2);
+        res.addAtomSets(aux);
 
         ++it1;
       }
