@@ -36,15 +36,12 @@
 
 #include <iostream>
 #include <list>
-#include <set>
+#include <map>
 #include <utility>
 
 #include <boost/config.hpp>
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/icl/discrete_interval.hpp>
 #include <boost/optional/optional.hpp>
-#include <boost/variant.hpp>
-#include <boost/variant/get.hpp>
 
 #include <ast/ast_types.h>
 #include <ast/equation.h>
@@ -184,6 +181,12 @@ struct IntervalImp1{
 
     if(capRes.empty){
       res.insert(itRes, i1);
+      return res;
+    }
+
+    if(capRes == i1){
+      IntervalImp1 aux(true);
+      res.insert(itRes, aux);
       return res;
     }
 
@@ -357,8 +360,9 @@ struct MultiInterImp1{
     MultiInterImp1<CT, IntervalImp, NumImp> capres = cap(mi2);
 
     if(capres.empty()){
-      CT<MultiInterImp1<CT, IntervalImp, NumImp>> emptyRes;
-      return emptyRes;
+      CT<MultiInterImp1<CT, IntervalImp, NumImp>> res;
+      res.insert(res.begin(), *this);
+      return res;
     }
 
     intImpIt it1 = inters.begin();
@@ -623,8 +627,8 @@ struct AtomSetAbs{
   ASetImp as;
 };
 
-template <template<typename T1, typename = std::allocator<T1>> class CT,
-          typename ASetImp>
+template<template<class T, class Alloc = allocator<T>> class CT, 
+         typename ASetImp>
 struct SetImp1{
   typedef CT<ASetImp> setType;
   setType asets;
@@ -662,11 +666,10 @@ struct SetImp1{
   }
 
   void addAtomSets(setType &sets2){
-    SetImp1 res;
     typename setType::iterator it2 = sets2.begin();
 
     while(it2 != sets2.end()){
-      res.addAtomSet(*it2);
+      addAtomSet(*it2);
       ++it2;
     }
   }
@@ -714,12 +717,32 @@ struct SetImp1{
           typename setType::iterator itaux = aux.begin();
           while(itaux != aux.end()){
             setType diffres = (*itaux).diff(*it2);
+            typename setType::iterator itdiff = diffres.begin();
+            cout << "Aux: ";
+            cout << *itaux << "\n";
+            cout << "It2: ";
+            cout << *it2 << "\n";
+            cout << "Diff: ";
+            while(itdiff != diffres.end()){
+              cout << *itdiff;
+              ++itdiff;
+            }
+            cout << "\n";
+
             newSets.addAtomSets(diffres);
 
             ++itaux;
           }
 
           aux = newSets.asets;
+/*
+          itaux = aux.begin();
+          while(itaux != aux.end()){
+            cout << *itaux;
+            ++itaux;
+          }
+          cout << "\n";
+*/
 
           ++it2;
         }
@@ -728,6 +751,11 @@ struct SetImp1{
 
         ++it1;
       }
+    }
+
+    else{
+      cout << "Entre?";
+      res.addAtomSets(asets);
     }
 
     return res; 
@@ -766,7 +794,7 @@ struct SetImp1{
   }
 };
 
-template <template<typename T, typename = allocator<T>> class CT,
+template <template<class T, class Alloc = allocator<T>> class CT, 
           typename SetImp, typename ASetImp>
 struct SetAbs{
   SetAbs(){
@@ -817,6 +845,7 @@ struct SetAbs{
   SetImp set;
 };
 
+/*
 template <template<typename T, typename = std::allocator<T>> class CT>
 struct LExprImp1{
   float m;
@@ -1180,7 +1209,6 @@ struct LMSetImp1{
       cerr << "Expression dimension should be larger than domain expression";
   }
 
-/*
   SetImp image(SetImp &set){
     CT<ASetImp> adom = dom.asets_(); 
     typename CT<ASetImp>::iterator itadom = adom.begin();
@@ -1190,8 +1218,8 @@ struct LMSetImp1{
       MultiInterImp mi = (*itadom).aset_();
     }
   }
-*/
 };
+*/
 
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
@@ -1215,6 +1243,14 @@ typedef MultiInterAbs<list, MultiInterImp, Interval, NI> MultiInterval;
 ostream &operator<<(ostream &out, MultiInterval &mi){
   list<Interval> is = mi.inters_();
   list<Interval>::iterator it = is.begin();
+
+  if(is.size() == 0)
+    return out;
+
+  if(is.size() == 1){
+    out << *it;
+    return out;
+  }
 
   out << *it;
   ++it;
@@ -1245,6 +1281,16 @@ ostream &operator<<(ostream &out, Set &s){
   list<AtomSet> as = s.asets_();
   list<AtomSet>::iterator it = as.begin();
 
+  if(as.size() == 0){
+    out << "{}";
+    return out;
+  }
+
+  if(as.size() == 1){
+    out << *it;
+    return out;
+  }
+
   out << *it;
   ++it;
   while(next(it, 1) != as.end()){
@@ -1255,7 +1301,7 @@ ostream &operator<<(ostream &out, Set &s){
 
   return out;
 }
-
+/*
 typedef LExprImp1<list> LExprImp;
 typedef LExprAbs<LExprImp, float> LExpr;
 
@@ -1382,7 +1428,7 @@ typedef boost::adjacency_list<boost::listS, boost::listS, boost::undirectedS, Se
  SetBasedGraph;
 typedef SetBasedGraph::vertex_descriptor SetVertexDesc;
 typedef SetBasedGraph::edge_descriptor SetEdgeDesc;
-
+*/
 #endif
 
 // TODO: operaciones de igualdad sobre resultado de diferencias

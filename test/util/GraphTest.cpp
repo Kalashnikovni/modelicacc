@@ -1,3 +1,22 @@
+/*****************************************************************************
+
+    This file is part of Modelica C Compiler.
+
+    Modelica C Compiler is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Modelica C Compiler is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Modelica C Compiler.  If not, see <http://www.gnu.org/licenses/>.
+
+******************************************************************************/
+
 #include <iostream>
 
 #include <boost/test/unit_test.hpp>
@@ -7,13 +26,13 @@
 #include <util/graph/graph_definition.h>
 
 using namespace boost::unit_test;
+using namespace std;
 
 /// @brief If sb-graphs containers implementation changes (uses vector, for example)
 /// this typedef should also change.
 typedef list<Interval> contInt;
 typedef list<MultiInterval> contMulti;
 typedef list<AtomSet> contAS;
-typedef list<Set> contSet;
 
 typedef list<NI> contNI;
 
@@ -180,7 +199,16 @@ void TestIntDiff3(){
   ++it;
   it = res2.insert(it, i6);
 
-  //contInt::iterator
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestIntDiff4(){
+  Interval i1(0, 1, 10, false);
+  Interval i2(true);
+
+  contInt res1 = i1.diff(i1);
+  contInt res2;
+  res2.insert(res2.begin(), i2);
 
   BOOST_CHECK(res1 == res2);
 }
@@ -494,6 +522,35 @@ void TestMultiDiff2(){
   it2 = res2.insert(it2, mi6);
 
   BOOST_CHECK(res1 == res2); 
+}
+
+void TestMultiDiff3(){
+  Interval i1(true);
+  Interval i2(30, 2, 40, false);
+  Interval i3(25, 1, 30, false);
+  
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  Interval i4(5, 3, 14, false);
+  Interval i5(true);
+  Interval i6(true);
+
+  MultiInterval mi2;
+  mi2.addInter(i4);
+  mi2.addInter(i5);
+  mi2.addInter(i6);
+
+  Interval i7(true);
+  Interval i8(32, 6, 38, false);
+  Interval i9(true);
+
+  contMulti res1 = mi1.diff(mi2);
+  contMulti::iterator it1 = res1.begin();
+
+  BOOST_CHECK(true);
 }
 
 void TestMultiMin1(){
@@ -1013,6 +1070,198 @@ void TestSetDiff1(){
   BOOST_CHECK(res1 == res2);
 }
 
+void TestSetDiff2(){
+  Interval i1(0, 2, 20, false);
+  Interval i2(30, 2, 40, false);
+  Interval i3(25, 1, 30, false);
+  MultiInterval mi1;
+
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  Interval i4(5, 3, 15, false);
+  Interval i5(true);
+  Interval i6(27, 1, 35, false);
+  MultiInterval mi2;
+
+  mi2.addInter(i4);
+  mi2.addInter(i5);
+  mi2.addInter(i6);
+
+  AtomSet as1(mi1);
+  AtomSet as2(mi2);
+
+  Set s1;
+
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  Interval i7(0, 1, Inf, false);
+  Interval i8(20, 3, 50, false);
+  Interval i9(true);
+
+  MultiInterval mi3;
+
+  mi3.addInter(i7);
+  mi3.addInter(i8);
+  mi3.addInter(i9);
+
+  AtomSet as3(mi3);
+
+  Set s2;
+
+  s2.addAtomSet(as3);
+
+  Set res1 = s1.diff(s2);
+
+  MultiInterval mi4;
+  mi4.addInter(i5);
+  mi4.addInter(i2);
+  mi4.addInter(i3);
+
+  Interval i10(0, 2, 6, false);
+  Interval i11(30, 2, 30, false);
+
+  MultiInterval mi5;
+  mi5.addInter(i10);
+  mi5.addInter(i11);
+  mi5.addInter(i3);
+
+  Interval i12(10, 6, 10, false);
+
+  MultiInterval mi6;
+  mi6.addInter(i12);
+  mi6.addInter(i11);
+  mi6.addInter(i3);
+
+  Interval i13(12, 6, 12, false);
+
+  MultiInterval mi7;
+  mi7.addInter(i13);
+  mi7.addInter(i11);
+  mi7.addInter(i3);
+
+  Interval i14(16, 2, 20, false);
+
+  MultiInterval mi8;
+  mi8.addInter(i14);
+  mi8.addInter(i11);
+  mi8.addInter(i3);
+
+  Interval i15(8, 6, 14, false);
+
+  MultiInterval mi9;
+  mi9.addInter(i15);
+  mi9.addInter(i11);
+  mi9.addInter(i3);
+
+  MultiInterval mi10;
+  mi10.addInter(i15);
+  mi10.addInter(i5);
+  mi10.addInter(i3);
+
+  Interval i16(34, 6, 34, false);
+  
+  MultiInterval mi11;
+  mi11.addInter(i10);
+  mi11.addInter(i16);
+  mi11.addInter(i3);
+
+  MultiInterval mi12;
+  mi12.addInter(i12);
+  mi12.addInter(i16);
+  mi12.addInter(i3);
+
+  MultiInterval mi13;
+  mi13.addInter(i13);
+  mi13.addInter(i16);
+  mi13.addInter(i3);
+
+  MultiInterval mi14;
+  mi14.addInter(i14);
+  mi14.addInter(i16);
+  mi14.addInter(i3);
+
+  MultiInterval mi15;
+  mi15.addInter(i15);
+  mi15.addInter(i16);
+  mi15.addInter(i3);
+
+  MultiInterval mi16;
+  mi16.addInter(i15);
+  mi16.addInter(i5);
+  mi16.addInter(i3);
+
+  Interval i17(36, 6, 36, false);
+
+  MultiInterval mi17;
+  mi17.addInter(i10);
+  mi17.addInter(i17);
+  mi17.addInter(i3);
+
+  MultiInterval i18;
+  mi18.addInter(i12);
+  mi18.addInter(i17);
+  mi18.addInter(i3);
+
+  MultiInterval mi19;
+  mi19.addInter(i13);
+  mi19.addInter(i17);
+  mi19.addInter(i3);
+
+  MultiInterval mi20;
+  mi20.addInter(i14);
+  mi20.addInter(i17);
+  mi20.addInter(i3);
+
+  MultiInterval mi21;
+  mi21.addInter(i15);
+  mi21.addInter(i17);
+  mi21.addInter(i3);
+
+  MultiInterval mi22;
+  mi22.addInter(i15);
+  mi22.addInter(i5);
+  mi22.addInter(i3);
+
+  Interval i18(40, 2, 40, false);
+
+  MultiInterval mi23;
+  mi23.addInter(i10);
+  mi23.addInter(i18);
+  mi23.addInter(i3);
+
+  MultiInterval mi24;
+  mi24.addInter(i12);
+  mi24.addInter(i18);
+  mi24.addInter(i3);
+
+  MultiInterval mi25;
+  mi25.addInter(i13);
+  mi25.addInter(i18);
+  mi25.addInter(i3);
+
+  MultiInterval mi26;
+  mi26.addInter(i14);
+  mi26.addInter(i18);
+  mi26.addInter(i3);
+
+  MultiInterval mi27;
+  mi27.addInter(i15);
+  mi27.addInter(i18);
+  mi27.addInter(i3);
+
+  MultiInterval mi28;
+  mi28.addInter(i15);
+  mi28.addInter(i5);
+  mi28.addInter(i3);
+
+  Interval i19(32, 6, 38, false);
+
+  BOOST_CHECK(true);
+}
+
 //____________________________________________________________________________//
 
 test_suite *init_unit_test_suite(int, char *[]){
@@ -1034,6 +1283,7 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntDiff1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntDiff2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntDiff3));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntDiff4));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntMin1));
 
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiCreation1));
@@ -1046,6 +1296,7 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiCap2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiDiff1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiDiff2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiDiff3));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiMin1));
 
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestASetCreation1));
@@ -1063,6 +1314,7 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetCap2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetCap3));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetDiff1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetDiff2));
 
   return 0;
 }
