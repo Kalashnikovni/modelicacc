@@ -42,6 +42,7 @@
 #include <boost/config.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional/optional.hpp>
+#include <boost/unordered_set.hpp>
 
 #include <ast/ast_types.h>
 #include <ast/equation.h>
@@ -50,6 +51,7 @@
 using namespace std;
 
 #define Inf numeric_limits<int>::max()
+
 
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
@@ -78,7 +80,9 @@ int lcm(int a, int b){
   return (a * b) / gcd(a, b);
 }
 
-template <template<typename T, typename = allocator<T>> class CT>
+template<template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT>
 struct IntervalImp1{
   int lo;
   int step;
@@ -116,6 +120,9 @@ struct IntervalImp1{
 
     else{ 
       cerr << "Subscripts should be positive" << endl;
+      lo = -1;
+      step = -1;
+      hi = -1;
       empty = true;
     }
   }
@@ -174,54 +181,43 @@ struct IntervalImp1{
 
   CT<IntervalImp1> diff(IntervalImp1 &i2){
     CT<IntervalImp1> res;
-    typename CT<IntervalImp1>::iterator itRes = res.begin();
+    IntervalImp1 capres = cap(i2);
 
-    IntervalImp1 i1 = *this;
-    IntervalImp1 capRes = i1.cap(i2);
-
-    if(capRes.empty){
-      res.insert(itRes, i1);
+    if(capres.empty){
+      res.insert(*this);
       return res;
     }
 
-    if(capRes == i1){
+    if(capres == *this){
       IntervalImp1 aux(true);
-      res.insert(itRes, aux);
+      res.insert(aux);
       return res;
     }
 
     // "Before" intersection
-    if(i1.lo < capRes.lo){
-      IntervalImp1 aux = IntervalImp1(i1.lo, 1, capRes.lo - 1, false);
-      IntervalImp1 left = i1.cap(aux); 
-      itRes = res.insert(itRes, left);
-      ++itRes;
+    if(lo < capres.lo){
+      IntervalImp1 aux = IntervalImp1(lo, 1, capres.lo - 1, false);
+      IntervalImp1 left = cap(aux);
+      res.insert(left);
     }
 
     // "During" intersection
-    if(capRes.step > (capRes.hi - capRes.lo)){
-      CT<IntervalImp1> emptyRes;
-      return emptyRes;
-    }
-
-    else{
-      int nInters = capRes.step / i1.step;
+    if(capres.step <= (capres.hi - capres.lo)){
+      int nInters = capres.step / step;
       for(int i = 1; i < nInters; i++){
-        IntervalImp1 aux = IntervalImp1(capRes.lo + i * step, capRes.step, capRes.hi, false);
-        itRes = res.insert(itRes, aux);
-        ++itRes;
+        IntervalImp1 aux = IntervalImp1(capres.lo + i * step, capres.step, capres.hi, false);
+        res.insert(aux);
       }  
     }
 
     // "After" intersection
-    if(i1.hi > capRes.hi){
-      IntervalImp1 aux = IntervalImp1(capRes.hi + 1, 1, i1.hi, false);
-      IntervalImp1 right = i1.cap(aux);
-      itRes = res.insert(itRes, right);
-      ++itRes;
+    if(hi > capres.hi){
+      IntervalImp1 aux = IntervalImp1(capres.hi + 1, 1, hi, false);
+      IntervalImp1 right = cap(aux);
+      res.insert(right);
     }
-
-    return res; 
+  
+    return res;
   }
 
   int minElem(){
@@ -232,17 +228,38 @@ struct IntervalImp1{
     return (lo == other.lo) && (step == other.step) && (hi == other.hi) &&
            (empty == other.empty);
   }
+
+  bool operator!=(const IntervalImp1 &other) const{
+    return (lo != other.lo) || (step != other.step) || (hi != other.hi) ||
+           (empty != other.empty);
+  }
+
+  size_t hash(){
+    return lo;
+  }
 };
 
-template<template<typename T, typename = allocator<T>> class CT,
+template<template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT>
+size_t hash_value(IntervalImp1<CT> inter){
+  return inter.hash();
+}
+
+template<template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT,
          typename IntervalImp, typename NumImp>
 struct IntervalAbs{
   IntervalAbs(){}; 
-  IntervalAbs(IntervalImp interval){
-    i = interval;
+  IntervalAbs(IntervalImp inter){
+    i = inter;
   }
   IntervalAbs(NumImp lo, NumImp step, NumImp hi, bool emp){
     i = IntervalImp(lo, step, hi, emp);
+  }
+  IntervalAbs(bool emp){
+    i = IntervalImp(emp);
   }
   
   NumImp lo_(){
@@ -265,21 +282,17 @@ struct IntervalAbs{
     return i.isIn(x);
   }
 
-  IntervalAbs cap(IntervalAbs &i2){
+  IntervalAbs cap(IntervalAbs i2){
     return IntervalAbs(i.cap(i2.i));
   }
 
-  CT<IntervalAbs> diff(IntervalAbs &i2){
-    CT<IntervalImp> resDiff = i.diff(i2.i);
-    typename CT<IntervalImp>::iterator it = resDiff.begin();
+  CT<IntervalAbs> diff(IntervalAbs i2){
     CT<IntervalAbs> res;
-    typename CT<IntervalAbs>::iterator itres = res.begin();
-    
-    while(it != resDiff.end()){
-      itres = res.insert(itres, IntervalAbs(*it));
-      ++itres;
+    CT<IntervalImp> diffres = i.diff(i2.i);
 
-      ++it;
+    for(IntervalImp inter : diffres){
+      IntervalAbs aux(inter);
+      res.insert(aux);
     }
 
     return res;
@@ -292,27 +305,47 @@ struct IntervalAbs{
   bool operator==(const IntervalAbs &other) const{
     return i == other.i;
   }
+  
+  bool operator!=(const IntervalAbs &other) const{
+    return i != other.i;
+  }
+
+  size_t hash(){
+    return i.lo_(); 
+  }
  
   private:
   IntervalImp i; 
 };
 
-// Represents the cartesian product of its elements
-template <template<typename T, typename = allocator<T>> class CT,
-          typename IntervalImp, typename NumImp>
+template<template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT,
+         typename IntervalImp, typename NumImp>
+inline size_t hash_value(IntervalAbs<CT, IntervalImp, NumImp> inter){
+  return inter.hash();
+}
+
+// MultiIntervals ---------------------------------------------------------------------------------
+
+template<template<typename T, typename = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+         typename IntervalImp, typename NumImp>
 struct MultiInterImp1{
-  CT<IntervalImp> inters;
-  typedef typename CT<IntervalImp>::iterator intImpIt;
+  CT1<IntervalImp> inters;
+  typedef typename CT1<IntervalImp>::iterator intImpIt;
 
   MultiInterImp1(){
-    CT<IntervalImp> emptyRes;
+    CT1<IntervalImp> emptyRes;
     inters = emptyRes;  
   }
-  MultiInterImp1(CT<IntervalImp> is){
+  MultiInterImp1(CT1<IntervalImp> is){
     inters = is;
   }
 
-  CT<IntervalImp> inters_(){
+  CT1<IntervalImp> inters_(){
     return inters;
   }
 
@@ -337,7 +370,7 @@ struct MultiInterImp1{
   }
 
   MultiInterImp1 cap(MultiInterImp1 &mi2){
-    CT<IntervalImp> res;
+    CT1<IntervalImp> res;
     intImpIt itres = res.begin();
 
     intImpIt it1 = inters.begin();
@@ -345,7 +378,12 @@ struct MultiInterImp1{
     int minLength = min(inters.size(), mi2.inters.size());
     for(int i = 0; i < minLength; ++i){
       IntervalImp capres = (*it1).cap(*it2);
-      
+     
+      if(capres.empty_() && !(*it1).empty_() && !(*it2).empty_()){
+        CT1<IntervalImp> aux;
+        return MultiInterImp1(aux);
+      }
+ 
       itres = res.insert(itres, capres);
       ++itres;
 
@@ -353,22 +391,27 @@ struct MultiInterImp1{
       ++it2;    
     }
 
-    return MultiInterImp1<CT, IntervalImp, NumImp>(res);
+    return MultiInterImp1(res);
   }
 
-  CT<MultiInterImp1<CT, IntervalImp, NumImp>> diff(MultiInterImp1 &mi2){
-    MultiInterImp1<CT, IntervalImp, NumImp> capres = cap(mi2);
+  CT2<MultiInterImp1> diff(MultiInterImp1 &mi2){
+    MultiInterImp1 capres = cap(mi2);
+
+    CT2<MultiInterImp1> resmi;
+    typename CT2<MultiInterImp1>::iterator itresmi = resmi.begin();
 
     if(capres.empty()){
-      CT<MultiInterImp1<CT, IntervalImp, NumImp>> res;
-      res.insert(res.begin(), *this);
-      return res;
+      resmi.insert(*this);
+      return resmi;
     }
+
+    if(inters == capres.inters)
+      return resmi;
 
     intImpIt it1 = inters.begin();
     intImpIt itcap = capres.inters.begin();
-    CT<CT<IntervalImp>> diffs;
-    typename CT<CT<IntervalImp>>::iterator itdiffs = diffs.begin();
+    CT1<CT2<IntervalImp>> diffs;
+    typename CT1<CT2<IntervalImp>>::iterator itdiffs = diffs.begin();
 
     while(it1 != inters.end()){
       itdiffs = diffs.insert(itdiffs, (*it1).diff(*itcap));
@@ -378,21 +421,18 @@ struct MultiInterImp1{
       ++itdiffs;
     }
 
-    CT<MultiInterImp1> resmi;
-    typename CT<MultiInterImp1>::iterator itresmi = resmi.begin();
-
     it1 = inters.begin();
     ++it1;
     itdiffs = diffs.begin();
     
     while(itdiffs != diffs.end()){
-      CT<IntervalImp> aux = *itdiffs;
-      intImpIt itaux = aux.begin();
+      CT2<IntervalImp> aux = *itdiffs;
+      typename CT2<IntervalImp>::iterator itaux = aux.begin();
 
       int i = distance(diffs.begin(), itdiffs);
 
       while(itaux != aux.end()){
-        CT<IntervalImp> resi;
+        CT1<IntervalImp> resi;
         intImpIt itresi = resi.begin();
 
         itcap = capres.inters.begin();
@@ -430,11 +470,11 @@ struct MultiInterImp1{
     return resmi;
   }
 
-  CT<NumImp> minElem(){
+  CT1<NumImp> minElem(){
     intImpIt it = inters.begin();
 
-    CT<NumImp> res;
-    typename CT<NumImp>::iterator itres = res.begin();
+    CT1<NumImp> res;
+    typename CT1<NumImp>::iterator itres = res.begin();
 
     while(it != inters.end()){
       itres = res.insert(itres, (*it).minElem());
@@ -449,19 +489,39 @@ struct MultiInterImp1{
   bool operator==(const MultiInterImp1 &other) const{
     return inters == other.inters;
   }
+
+  bool operator!=(const MultiInterImp1 &other) const{
+    return inters != other.inters;
+  }
+
+  size_t hash(){
+    return inters.size(); 
+  }
 };
 
-template <template <typename T, typename = allocator<T>> class CT,
+template<template<typename T, typename = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+         typename IntervalImp, typename NumImp>
+size_t hash_value(MultiInterImp1<CT1, CT2, IntervalImp, NumImp> mi){
+  return mi.hash();
+}
+
+template<template<typename T, typename = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
           typename MultiInterImp, typename IntervalImp, typename NumImp>
 struct MultiInterAbs{
   MultiInterAbs(){
-    CT<IntervalImp> aux;
+    CT1<IntervalImp> aux;
     multiInterImp = aux;
   };
   MultiInterAbs(MultiInterImp mi){
     multiInterImp = mi;
   }
-  MultiInterAbs(CT<IntervalImp> ints){
+  MultiInterAbs(CT1<IntervalImp> ints){
     multiInterImp = MultiInterImp(ints);
   };
 
@@ -469,7 +529,7 @@ struct MultiInterAbs{
     return multiInterImp.empty();
   };
 
-  CT<IntervalImp> inters_(){
+  CT1<IntervalImp> inters_(){
     return multiInterImp.inters_();
   }
 
@@ -478,29 +538,25 @@ struct MultiInterAbs{
   }
 
   MultiInterAbs cap(MultiInterAbs &mi2){
-    MultiInterImp aux = multiInterImp.cap(mi2.multiInterImp);
-    return MultiInterAbs(aux);
-  };
+    return MultiInterAbs(multiInterImp.cap(mi2.multiInterImp));
+  }
 
-  CT<MultiInterAbs<CT, MultiInterImp, IntervalImp, NumImp>> diff(MultiInterAbs &mi2){
-    CT<MultiInterImp> diffRes = multiInterImp.diff(mi2.multiInterImp);
-    typename CT<MultiInterImp>::iterator it = diffRes.begin();
-    CT<MultiInterAbs> res;
-    typename CT<MultiInterAbs>::iterator itres = res.begin();
+  CT2<MultiInterAbs> diff(MultiInterAbs &mi2){
+    CT2<MultiInterImp> diffRes = multiInterImp.diff(mi2.multiInterImp);
+    typename CT2<MultiInterImp>::iterator it = diffRes.begin();
+    CT2<MultiInterAbs> res;
 
     while(it != diffRes.end()){
       MultiInterAbs aux(*it);
-      itres = res.insert(itres, aux);
-      ++itres;
+      res.insert(aux);
 
       ++it;
     }
 
-
     return res;
   };
 
-  CT<NumImp> minElem(){
+  CT1<NumImp> minElem(){
     return multiInterImp.minElem();
   }
 
@@ -508,10 +564,30 @@ struct MultiInterAbs{
     return multiInterImp == other.multiInterImp;
   }
 
+  bool operator!=(const MultiInterAbs &other) const{
+    return multiInterImp != other.multiInterImp;
+  }
+
+  size_t hash(){
+    return multiInterImp.hash();
+  }
+
   private:
   MultiInterImp multiInterImp;
 };
 
+template<template<typename T, typename = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+          typename MultiInterImp, typename IntervalImp, typename NumImp>
+size_t hash_value(MultiInterAbs<CT1, CT2, MultiInterImp, IntervalImp, NumImp> mi){
+  return mi.hash();
+}
+
+// Atomic sets ------------------------------------------------------------------------------------
+
+/*
 template <template<typename T1, typename = allocator<T1>> class CT,
           typename MultiInterImp, typename NumImp>
 struct AtomSetImp1{
@@ -662,7 +738,8 @@ struct SetImp1{
   }
 
   void addAtomSet(ASetImp &aset2){
-    asets.insert(asets.end(), aset2);
+    if(!aset2.empty())
+      asets.insert(asets.end(), aset2);
   }
 
   void addAtomSets(setType &sets2){
@@ -717,32 +794,12 @@ struct SetImp1{
           typename setType::iterator itaux = aux.begin();
           while(itaux != aux.end()){
             setType diffres = (*itaux).diff(*it2);
-            typename setType::iterator itdiff = diffres.begin();
-            cout << "Aux: ";
-            cout << *itaux << "\n";
-            cout << "It2: ";
-            cout << *it2 << "\n";
-            cout << "Diff: ";
-            while(itdiff != diffres.end()){
-              cout << *itdiff;
-              ++itdiff;
-            }
-            cout << "\n";
-
             newSets.addAtomSets(diffres);
 
             ++itaux;
           }
 
           aux = newSets.asets;
-/*
-          itaux = aux.begin();
-          while(itaux != aux.end()){
-            cout << *itaux;
-            ++itaux;
-          }
-          cout << "\n";
-*/
 
           ++it2;
         }
@@ -753,10 +810,8 @@ struct SetImp1{
       }
     }
 
-    else{
-      cout << "Entre?";
+    else
       res.addAtomSets(asets);
-    }
 
     return res; 
   }
@@ -770,13 +825,29 @@ struct SetImp1{
     return SetImp1(asets);
   }
 
+  void simplify(){
+    typename setType::iterator it1 = asets.begin();
+
+    while(it1 != asets.end()){
+      typename setType::iterator it2 = asets.begin();
+
+      while(it2 != asets.end()){
+      }
+    }
+  }
+
   bool operator==(const SetImp1 &other) const{
+    SetImp1 aux1 = *this;
+    SetImp1 aux2 = other;
     auto it1 = asets.begin();
-    auto it2 = other.asets.begin(); 
+
+    if(aux1.empty() && aux2.empty())
+      return true;
 
     while(it1 != asets.end()){
       bool aux = false;
 
+      auto it2 = other.asets.begin(); 
       while(it2 != other.asets.end()){
         if(*it1 == *it2)
           aux = true; 
@@ -784,7 +855,7 @@ struct SetImp1{
         ++it2;
       }
 
-      if(!aux && it2 != other.asets.end())
+      if(!aux)
         return false;
 
       ++it1;
@@ -845,7 +916,6 @@ struct SetAbs{
   SetImp set;
 };
 
-/*
 template <template<typename T, typename = std::allocator<T>> class CT>
 struct LExprImp1{
   float m;
@@ -1229,16 +1299,16 @@ struct LMSetImp1{
 
 typedef int NI;
 
-typedef IntervalImp1<list> IntervalImp;
-typedef IntervalAbs<list, IntervalImp, NI> Interval;
+typedef IntervalImp1<boost::unordered_set> IntervalImp;
+typedef IntervalAbs<boost::unordered_set, IntervalImp, NI> Interval;
 
 ostream &operator<<(ostream &out, Interval &i){
   out << "[" << i.lo_() << ":" << i.step_() << ":" << i.hi_() << "]";
   return out;
 }
 
-typedef MultiInterImp1<list, Interval, NI> MultiInterImp;
-typedef MultiInterAbs<list, MultiInterImp, Interval, NI> MultiInterval;
+typedef MultiInterImp1<list, boost::unordered_set, Interval, NI> MultiInterImp;
+typedef MultiInterAbs<list, boost::unordered_set, MultiInterImp, Interval, NI> MultiInterval;
 
 ostream &operator<<(ostream &out, MultiInterval &mi){
   list<Interval> is = mi.inters_();
@@ -1263,6 +1333,7 @@ ostream &operator<<(ostream &out, MultiInterval &mi){
   return out;
 }
 
+/*
 typedef AtomSetImp1<list, MultiInterval, NI> AtomSetImp;
 typedef AtomSetAbs<list, AtomSetImp, MultiInterval, NI> AtomSet;
 
@@ -1287,7 +1358,7 @@ ostream &operator<<(ostream &out, Set &s){
   }
 
   if(as.size() == 1){
-    out << *it;
+    out << "{" << *it << "}";
     return out;
   }
 
@@ -1301,7 +1372,6 @@ ostream &operator<<(ostream &out, Set &s){
 
   return out;
 }
-/*
 typedef LExprImp1<list> LExprImp;
 typedef LExprAbs<LExprImp, float> LExpr;
 
