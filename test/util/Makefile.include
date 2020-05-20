@@ -1,5 +1,6 @@
 all: test/util/GraphTest
-SRC_TEST_UTIL := test/util/GraphTest.cpp 
+SRC_TEST_UTIL := test/util/GraphTest.cpp \
+    util/debug.cpp 
 
 OBJS_TEST_UTIL= $(SRC_TEST_UTIL:.cpp=.o)
 -include $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRC_TEST_UTIL)))

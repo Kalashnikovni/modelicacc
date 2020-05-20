@@ -1,6 +1,7 @@
 all: util/graph/graph 
 SRC_GRAPH := util/graph/main.cpp \
 	ast/equation.cpp \
+    util/debug.cpp \
     util/graph/graph_definition.cpp 
 
 OBJS_GRAPH= $(SRC_GRAPH:.cpp=.o)

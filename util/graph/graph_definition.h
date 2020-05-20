@@ -46,6 +46,7 @@
 
 #include <ast/ast_types.h>
 #include <ast/equation.h>
+#include <util/debug.h>
 #include <util/table.h>
 
 using namespace std;
@@ -113,13 +114,13 @@ struct IntervalImp1{
       }
 
       else{
-        cerr << "Wrong values for subscript (check low <= hi)" << endl;
+        WARNING("Wrong values for subscript (check low <= hi)");
         empty = true;
       }
     }
 
     else{ 
-      cerr << "Subscripts should be positive" << endl;
+      WARNING("Subscripts should be positive");
       lo = -1;
       step = -1;
       hi = -1;
@@ -335,7 +336,7 @@ template<template<typename T, typename = allocator<T>> class CT1,
          typename IntervalImp, typename NumImp>
 struct MultiInterImp1{
   CT1<IntervalImp> inters;
-  typedef typename CT1<IntervalImp>::iterator intImpIt;
+  typedef typename CT1<IntervalImp>::iterator IntImpIt;
 
   MultiInterImp1(){
     CT1<IntervalImp> emptyRes;
@@ -354,7 +355,7 @@ struct MultiInterImp1{
   }
 
   bool empty(){
-    intImpIt it = inters.begin();
+    IntImpIt it = inters.begin();
 
     if(inters.empty())
       return true;
@@ -369,26 +370,53 @@ struct MultiInterImp1{
     return true;
   }
 
-  MultiInterImp1 cap(MultiInterImp1 &mi2){
-    CT1<IntervalImp> res;
-    intImpIt itres = res.begin();
+  bool isIn(CT1<NumImp> elem){
+    typename CT1<NumImp>::iterator it1 = elem.begin();
+    IntImpIt it2 = inters.begin();
 
-    intImpIt it1 = inters.begin();
-    intImpIt it2 = mi2.inters.begin();
-    int minLength = min(inters.size(), mi2.inters.size());
-    for(int i = 0; i < minLength; ++i){
-      IntervalImp capres = (*it1).cap(*it2);
-     
-      if(capres.empty_() && !(*it1).empty_() && !(*it2).empty_()){
-        CT1<IntervalImp> aux;
-        return MultiInterImp1(aux);
-      }
- 
-      itres = res.insert(itres, capres);
-      ++itres;
+    if(elem.size() != inters.size())
+      return false;
+
+    while(it1 != elem.end()){
+      if(!(*it2).isIn(*it1))
+        return false;      
 
       ++it1;
-      ++it2;    
+      ++it2;
+    }
+
+    return true;
+  }
+
+  MultiInterImp1 cap(MultiInterImp1 &mi2){
+    CT1<IntervalImp> res;
+    IntImpIt itres = res.begin();
+
+    IntImpIt it1 = inters.begin();
+    IntImpIt it2 = mi2.inters.begin();
+    int sz = inters.size();
+    if(inters.size() == mi2.inters.size()){
+      for(int i = 0; i < sz; ++i){
+        IntervalImp capres = (*it1).cap(*it2);
+     
+        if(!(*it1).empty_() && !(*it2).empty_()){
+          if(capres.empty_()){
+            CT1<IntervalImp> aux;
+            return MultiInterImp1(aux);
+          }
+
+          itres = res.insert(itres, capres);
+          ++itres;
+        }
+
+        else{
+          CT1<IntervalImp> aux;
+          return MultiInterImp1(aux);
+        }
+
+        ++it1;
+        ++it2;    
+      }
     }
 
     return MultiInterImp1(res);
@@ -408,8 +436,8 @@ struct MultiInterImp1{
     if(inters == capres.inters)
       return resmi;
 
-    intImpIt it1 = inters.begin();
-    intImpIt itcap = capres.inters.begin();
+    IntImpIt it1 = inters.begin();
+    IntImpIt itcap = capres.inters.begin();
     CT1<CT2<IntervalImp>> diffs;
     typename CT1<CT2<IntervalImp>>::iterator itdiffs = diffs.begin();
 
@@ -432,33 +460,37 @@ struct MultiInterImp1{
       int i = distance(diffs.begin(), itdiffs);
 
       while(itaux != aux.end()){
-        CT1<IntervalImp> resi;
-        intImpIt itresi = resi.begin();
+        IntervalImp auxaux = *itaux;
 
-        itcap = capres.inters.begin();
+        if(!auxaux.empty_()){
+          CT1<IntervalImp> resi;
+          IntImpIt itresi = resi.begin();
+  
+          itcap = capres.inters.begin();
 
-        if(i > 0){
-          for(int j = 0; j < i; j++){
-            itresi = resi.insert(itresi, *itcap);         
-            ++itresi; 
+          if(i > 0){
+            for(int j = 0; j < i; j++){
+              itresi = resi.insert(itresi, *itcap);         
+              ++itresi; 
 
-            ++itcap;
+              ++itcap;
+            }
           }
-        }
 
-        itresi = resi.insert(itresi, *itaux);
-        ++itresi; 
+          itresi = resi.insert(itresi, *itaux);
+          ++itresi; 
 
-        intImpIt auxit1 = it1;
-        while(auxit1 != inters.end()){
-          itresi = resi.insert(itresi, *auxit1);
-          ++itresi;
+          IntImpIt auxit1 = it1;
+          while(auxit1 != inters.end()){
+            itresi = resi.insert(itresi, *auxit1);
+            ++itresi;
         
-          ++auxit1;
-        }
+            ++auxit1;
+          }
 
-        itresmi = resmi.insert(itresmi, MultiInterImp1(resi));
-        ++itresmi;
+          itresmi = resmi.insert(itresmi, MultiInterImp1(resi));
+          ++itresmi;
+        }
 
         ++itaux;
       }
@@ -470,13 +502,30 @@ struct MultiInterImp1{
     return resmi;
   }
 
+  MultiInterImp1 crossProd(MultiInterImp1 mi2){
+    IntImpIt it2 = mi2.inters.begin();
+
+    while(it2 != mi2.inters.end()){
+      inters.insert(inters.end(), *it2);
+ 
+      ++it2;
+    }
+
+    return *this;
+  }
+
   CT1<NumImp> minElem(){
-    intImpIt it = inters.begin();
+    IntImpIt it = inters.begin();
 
     CT1<NumImp> res;
     typename CT1<NumImp>::iterator itres = res.begin();
 
     while(it != inters.end()){
+      if((*it).empty_()){
+        CT1<NumImp> aux;
+        return aux;
+      }
+
       itres = res.insert(itres, (*it).minElem());
       ++itres;
 
@@ -517,20 +566,24 @@ struct MultiInterAbs{
   MultiInterAbs(){
     CT1<IntervalImp> aux;
     multiInterImp = aux;
-  };
+  }
   MultiInterAbs(MultiInterImp mi){
     multiInterImp = mi;
   }
   MultiInterAbs(CT1<IntervalImp> ints){
     multiInterImp = MultiInterImp(ints);
-  };
+  }
 
   bool empty(){
     return multiInterImp.empty();
-  };
+  }
 
   CT1<IntervalImp> inters_(){
     return multiInterImp.inters_();
+  }
+
+  bool isIn(CT1<NumImp> elem){
+    return multiInterImp.isIn(elem);
   }
 
   void addInter(IntervalImp i){
@@ -554,7 +607,11 @@ struct MultiInterAbs{
     }
 
     return res;
-  };
+  }
+
+  MultiInterAbs crossProd(MultiInterAbs &mi2){
+    return MultiInterAbs(multiInterImp.crossProd(mi2.multiInterImp));
+  }
 
   CT1<NumImp> minElem(){
     return multiInterImp.minElem();
@@ -580,16 +637,18 @@ template<template<typename T, typename = allocator<T>> class CT1,
          template<typename Value, typename Hash = boost::hash<Value>, 
                   typename Pred = std::equal_to<Value>, 
                   typename Alloc = std::allocator<Value>> class CT2,
-          typename MultiInterImp, typename IntervalImp, typename NumImp>
+         typename MultiInterImp, typename IntervalImp, typename NumImp>
 size_t hash_value(MultiInterAbs<CT1, CT2, MultiInterImp, IntervalImp, NumImp> mi){
   return mi.hash();
 }
 
 // Atomic sets ------------------------------------------------------------------------------------
 
-/*
-template <template<typename T1, typename = allocator<T1>> class CT,
-          typename MultiInterImp, typename NumImp>
+template<template<typename T, typename = allocator<T>> class CT1, 
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+         typename MultiInterImp, typename NumImp>
 struct AtomSetImp1{
   MultiInterImp aset;
 
@@ -609,24 +668,28 @@ struct AtomSetImp1{
     return aset.empty();  
   }
 
+  bool isIn(CT1<NumImp> elem){
+    return aset.isIn(elem);
+  }
+
   AtomSetImp1 cap(AtomSetImp1 &aset2){
     AtomSetImp1 aux(aset.cap(aset2.aset));
     return aux;
   }
 
-  CT<AtomSetImp1<CT, MultiInterImp, NumImp>> diff(AtomSetImp1 &aset2){
-    CT<AtomSetImp1<CT, MultiInterImp, NumImp>> res;
-    typename CT<AtomSetImp1<CT, MultiInterImp, NumImp>>::iterator itres = res.begin();
+  CT2<AtomSetImp1> diff(AtomSetImp1 &aset2){
+    CT2<AtomSetImp1> res;
+    typename CT2<AtomSetImp1>::iterator itres = res.begin();
 
-    CT<MultiInterImp> atomicDiff = aset.diff(aset2.aset);
+    CT2<MultiInterImp> atomicDiff = aset.diff(aset2.aset);
 
     if(atomicDiff.empty()){
-      CT<AtomSetImp1<CT, MultiInterImp, NumImp>> emptyRes;
+      CT2<AtomSetImp1> emptyRes;
       return emptyRes;
     } 
 
     else{
-      typename CT<MultiInterImp>::iterator it = atomicDiff.begin();
+      typename CT2<MultiInterImp>::iterator it = atomicDiff.begin();
       while(it != atomicDiff.end()){
         itres = res.insert(itres, AtomSetImp1(*it)); 
         ++itres;
@@ -638,16 +701,40 @@ struct AtomSetImp1{
     return res;
   }
 
-  CT<NumImp> minElem(){
+  AtomSetImp1 crossProd(AtomSetImp1 &aset2){
+    return AtomSetImp1(aset.crossProd(aset2.aset));
+  }
+
+  CT1<NumImp> minElem(){
     return aset.minElem();
   }
 
   bool operator==(const AtomSetImp1 &other) const{
     return aset == other.aset;
   }
+
+  bool operator!=(const AtomSetImp1 &other) const{
+    return aset != other.aset;
+  }
+
+  size_t hash(){
+    return aset.hash();
+  }
 };
 
-template <template<typename T, typename = allocator<T>> class CT,
+template<template<typename T, typename = allocator<T>> class CT1, 
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+         typename MultiInterImp, typename NumImp>
+size_t hash_value(AtomSetImp1<CT1, CT2, MultiInterImp, NumImp> as){
+  return as.hash();
+}
+
+template<template<typename T, typename = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
           typename ASetImp, typename MultiInterImp, typename NumImp>
 struct AtomSetAbs{
   AtomSetAbs(){
@@ -670,16 +757,20 @@ struct AtomSetAbs{
     return as.empty();  
   }
 
+  bool isIn(CT1<NumImp> elem){
+    return as.isIn(elem);
+  }
+
   AtomSetAbs cap(AtomSetAbs &aset2){
     AtomSetAbs aux(as.cap(aset2.as));
     return aux;
   }
 
-  CT<AtomSetAbs<CT, ASetImp, MultiInterImp, NumImp>> diff(AtomSetAbs &aset2){
-    CT<ASetImp> diffRes = as.diff(aset2.as);
-    typename CT<ASetImp>::iterator it = diffRes.begin();
-    CT<AtomSetAbs> res;
-    typename CT<AtomSetAbs>::iterator itRes = res.begin();
+  CT2<AtomSetAbs> diff(AtomSetAbs &aset2){
+    CT2<ASetImp> diffRes = as.diff(aset2.as);
+    typename CT2<ASetImp>::iterator it = diffRes.begin();
+    CT2<AtomSetAbs> res;
+    typename CT2<AtomSetAbs>::iterator itRes = res.begin();
 
     while(it != diffRes.end()){
       itRes = res.insert(itRes, AtomSetAbs(*it));
@@ -690,8 +781,12 @@ struct AtomSetAbs{
 
     return res;
   }
+
+  AtomSetAbs crossProd(AtomSetAbs &aset2){
+    return AtomSetAbs(as.crossProd(aset2.as));
+  }
  
-  CT<NumImp> minElem(){
+  CT1<NumImp> minElem(){
     return as.minElem();
   }
 
@@ -699,36 +794,63 @@ struct AtomSetAbs{
     return as == other.as;
   }
 
+  bool operator!=(const AtomSetAbs &other) const{
+    return as != other.as;
+  }
+
+  size_t hash(){
+    return as.hash();
+  }
+
   private:
   ASetImp as;
 };
 
-template<template<class T, class Alloc = allocator<T>> class CT, 
-         typename ASetImp>
+template<template<typename T, typename = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+         typename ASetImp, typename MultiInterImp, typename NumImp>
+size_t hash_value(AtomSetAbs<CT1, CT2, ASetImp, MultiInterImp, NumImp> as){
+  return as.hash();
+}
+
+// Sets --------------------------------------------------------------------------------------------
+
+template<template<typename T, typename = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+         typename ASetImp, typename NumImp>
 struct SetImp1{
-  typedef CT<ASetImp> setType;
-  setType asets;
+  typedef CT2<ASetImp> SetType;
+  typedef typename SetType::iterator SetIt;
+
+  SetType asets;
  
   SetImp1(){
-    setType aux;
+    SetType aux;
     asets = aux;
   }
-  SetImp1(setType ss){
+  SetImp1(SetType ss){
     asets = ss;
   }
 
-  setType asets_(){
+  SetType asets_(){
     return asets;
   }
 
   bool empty(){
-    typename setType::iterator it = asets.begin();
+    ASetImp aux;
+    SetIt it = asets.begin();
 
     if(asets.empty())
       return true;
 
     while(it != asets.end()){
-      if(!(*it).empty())
+      aux = *it;
+
+      if(!aux.empty())
         return false;
 
       ++it;
@@ -737,36 +859,56 @@ struct SetImp1{
     return true;
   }
 
-  void addAtomSet(ASetImp &aset2){
-    if(!aset2.empty())
-      asets.insert(asets.end(), aset2);
+  bool isIn(CT1<NumImp> elem){
+    ASetImp aux;
+    SetIt it = asets.begin();
+
+    while(it != asets.end()){
+      aux = *it;
+      if(aux.isIn(elem))
+        return true;
+    }
+
+    return false;
   }
 
-  void addAtomSets(setType &sets2){
-    typename setType::iterator it2 = sets2.begin();
+  void addAtomSet(ASetImp &aset2){
+    if(!aset2.empty())
+      asets.insert(aset2);
+  }
 
-    while(it2 != sets2.end()){
-      addAtomSet(*it2);
-      ++it2;
+  void addAtomSets(SetType &sets2){
+    ASetImp aux;
+
+    SetIt it = sets2.begin();
+
+    while(it != sets2.end()){
+      aux = *it;
+      addAtomSet(aux);
+
+      ++it;
     }
   }
 
   SetImp1 cap(SetImp1 &set2){
+    ASetImp aux1, aux2;
+
     if(empty() || set2.empty()){
-      setType emptyRes;
+      SetType emptyRes;
       return emptyRes; 
     }
     
-    setType res;
-    typename setType::iterator itres = res.begin();
-    typename setType::iterator it1 = asets.begin();
+    SetType res;
+    SetIt it1 = asets.begin();
 
     while(it1 != asets.end()){
-      typename setType::iterator it2 = set2.asets.begin();
+      aux1 = *it1;
+
+      SetIt it2 = set2.asets.begin();
 
       while(it2 != set2.asets.end()){
-        itres = res.insert(itres, (*it1).cap(*it2));
-        ++itres;
+        aux2 = *it2;
+        res.insert(aux1.cap(aux2));
 
         ++it2;
       }
@@ -778,28 +920,37 @@ struct SetImp1{
   }
 
   SetImp1 diff(SetImp1 &set2){
+    ASetImp aux1, aux2, aux3;
+
     SetImp1 res;
-    setType capres = cap(set2).asets; 
+    SetType capres = cap(set2).asets; 
 
     if(!capres.empty()){
-      typename setType::iterator it1 = asets.begin();
+      SetIt it1 = asets.begin();
 
       while(it1 != asets.end()){
-        setType aux(1, *it1);
+        aux1 = *it1;
+        SetType aux;
+        aux.insert(aux1);
  
-        typename setType::iterator it2 = capres.begin();
+        SetIt it2 = capres.begin();
         while(it2 != capres.end()){
+          aux2 = *it2;
+
           SetImp1 newSets;
 
-          typename setType::iterator itaux = aux.begin();
+          SetIt itaux = aux.begin();
           while(itaux != aux.end()){
-            setType diffres = (*itaux).diff(*it2);
+            aux3 = *itaux;
+
+            SetType diffres = (aux3).diff(aux2);
             newSets.addAtomSets(diffres);
 
             ++itaux;
           }
 
           aux = newSets.asets;
+           
 
           ++it2;
         }
@@ -825,48 +976,110 @@ struct SetImp1{
     return SetImp1(asets);
   }
 
-  void simplify(){
-    typename setType::iterator it1 = asets.begin();
+  SetImp1 crossProd(SetImp1 &set2){
+    ASetImp aux1;
+    ASetImp aux2;
+    SetIt it1 = asets.begin();
+    SetIt it2 = set2.asets.begin();
+
+    SetType res;
 
     while(it1 != asets.end()){
-      typename setType::iterator it2 = asets.begin();
+      aux1 = *it1;
 
-      while(it2 != asets.end()){
-      }
-    }
-  }
+      while(it2 != set2.asets.end()){
+        aux2 = *it2;
+ 
+        ASetImp auxres = aux1.crossProd(aux2);
+        res.addAtomSet(auxres);
 
-  bool operator==(const SetImp1 &other) const{
-    SetImp1 aux1 = *this;
-    SetImp1 aux2 = other;
-    auto it1 = asets.begin();
-
-    if(aux1.empty() && aux2.empty())
-      return true;
-
-    while(it1 != asets.end()){
-      bool aux = false;
-
-      auto it2 = other.asets.begin(); 
-      while(it2 != other.asets.end()){
-        if(*it1 == *it2)
-          aux = true; 
-      
         ++it2;
       }
-
-      if(!aux)
-        return false;
-
+ 
       ++it1;
     }
 
-    return true;
+    return res;
+  }
+
+  CT1<NumImp> minElem(){
+    SetIt it = asets.begin();
+    ASetImp aux1;
+
+    CT2<CT1<NumImp>> mins;
+    typename CT2<CT1<NumImp>>::iterator itmins = mins.begin();
+
+    while(it != asets.end()){
+      aux1 = *it;
+
+      itmins = mins.insert(itmins, aux1.minElem());
+      ++itmins;
+
+      ++it;
+    }
+
+    bool hasValue = false;
+    CT1<NumImp> res;
+    CT1<NumImp> aux2;
+  
+    itmins = mins.begin();
+    while(itmins != mins.end()){
+      aux2 = *itmins;
+
+      if(!hasValue && !aux2.empty()){
+        res = aux2;
+        hasValue = true;
+      }
+
+      if(hasValue && !aux2.empty()){
+        typename CT1<NumImp>::iterator it1 = res.begin();
+        typename CT1<NumImp>::iterator it2 = aux2.begin();
+
+        while(it1 != res.end()){
+          if(*it2 < *it1)
+            res = aux2;
+
+          else if(*it1 < *it2)
+            break;
+
+          ++it1;
+          ++it2;
+        }
+      }      
+
+      ++itmins;
+    }
+
+    return res;
+  }
+
+  bool operator==(const SetImp1 &other) const{
+    return asets == other.asets;
+  }
+
+  bool operator!=(const SetImp1 &other) const{
+    return asets != other.asets;
+  }
+
+  size_t hash(){
+    return asets.size();
   }
 };
 
-template <template<class T, class Alloc = allocator<T>> class CT, 
-          typename SetImp, typename ASetImp>
+template<template<typename T, typename = allocator<T>> class CT1, 
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+         typename ASetImp, typename NumImp>
+size_t hash_value(SetImp1<CT1, CT2, ASetImp, NumImp> s){
+  return s.hash();
+}
+
+template<template<typename T, typename = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+          typename SetImp, typename ASetImp, typename NumImp>
 struct SetAbs{
   SetAbs(){
     SetImp aux;
@@ -875,7 +1088,7 @@ struct SetAbs{
   SetAbs(SetImp ss){
     set = ss;
   }
-  SetAbs(CT<ASetImp> ass){
+  SetAbs(CT2<ASetImp> ass){
     SetImp aux(ass);
     set = aux;
   }
@@ -883,8 +1096,12 @@ struct SetAbs{
   bool empty(){
     return set.empty(); 
   }
+ 
+  bool isIn(CT1<NumImp> elem){
+    return set.isIn(elem);
+  }
 
-  CT<ASetImp> asets_(){
+  CT2<ASetImp> asets_(){
     return set.asets_();
   }
 
@@ -892,7 +1109,7 @@ struct SetAbs{
     set.addAtomSet(aset2); 
   }
 
-  void addAtomSets(CT<ASetImp> &sets2){
+  void addAtomSets(CT2<ASetImp> &sets2){
     set.addAtomSets(sets2);
   }
 
@@ -908,203 +1125,203 @@ struct SetAbs{
     return SetAbs(set.cup(set2.set));
   }
 
+  SetAbs crossProd(SetAbs &set2){
+    return SetAbs(set.crossProd(set2.set));
+  }
+
+  CT1<NumImp> minElem(){
+    return set.minElem();
+  }
+
   bool operator==(const SetAbs &other) const{
     return set == other.set;
+  }
+
+  bool operator!=(const SetAbs &other) const{
+    return set != other.set;
+  }
+
+  size_t hash(){
+    return set.hash();
   }
 
   private:
   SetImp set;
 };
 
-template <template<typename T, typename = std::allocator<T>> class CT>
-struct LExprImp1{
-  float m;
-  float h;
+template<template<typename T, typename = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+          typename SetImp, typename ASetImp, typename NumImp>
+size_t hash_value(SetAbs<CT1, CT2, SetImp, ASetImp, NumImp> s){
+  return s.hash();
+}
 
-  LExprImp1(){};
-  LExprImp1(float mm, float hh){
-    m = mm;
-    h = hh;
-  }
-
-  float m_(){
-    return m;
-  } 
-
-  float h_(){
-    return h;
-  }
-
-  LExprImp1 compose(LExprImp1 &le2){
-    float newM = le2.m * m;
-    float newH = m * le2.h + h;
-
-    return LExprImp1(newM, newH);
-  }
-
-  LExprImp1 invExpr(){
-    float newM, newH;
-
-    if(m != 0){
-      newM = m;
-      newH = -h / m;
-      return LExprImp1(newM, newH);
-    }
-
-    cerr << "The expression is not injective";
-    return LExprImp1();
-  }
-};
-
-template<typename LExprImp, typename NumImp>
-struct LExprAbs{
-  LExprAbs(){};
-  LExprAbs(LExprImp lexpr){
-    le = lexpr;
-  }
-
-  NumImp m_(){
-    return le.m_();
-  }
-
-  NumImp h_(){
-    return le.h_();
-  }
-
-  LExprAbs compose(LExprAbs &le2){
-    return LExprAbs(le.compose(le2.le));
-  } 
-
-  LExprAbs invExpr(){
-    return LExprAbs(le.invExpr());
-  }
-
-  private:
-  LExprImp le;
-};
+// LinearMaps ---------------------------------------------------------------------------------------
 
 template <template<typename T, typename = std::allocator<T>> class CT,
-          typename IntervalImp, typename LExprImp>
-struct LMIntImp1{
-  IntervalImp dom;
-  LExprImp expr;
+          typename NumImp>
+struct LMapImp1{
+  typedef CT<NumImp> CTNum;
+  typedef typename CTNum::iterator CTNumIt;
 
-  LMIntImp1(){};
-  LMIntImp1(IntervalImp d, LExprImp e){
-    dom = d;
-    expr = e;
+  CTNum gain;
+  CTNum offset;
+
+  LMapImp1(){
+    CTNum aux;
+    gain = aux;
+    offset = aux;
   }
-
-  IntervalImp dom_(){
-    return dom;
-  }
-
-  LExprImp expr_(){
-    return expr;
-  }
-
-  IntervalImp image(IntervalImp &set){
-    IntervalImp capRes = dom.cap(set);
-
-    if(capRes.empty())
-      return IntervalImp(true);
-
-    int newLo = expr.m_() * capRes.lo_() + expr.h_();
-    int newStep = expr.m_() * capRes.step_();
-    int newHi = expr.m_() * capRes.hi_() + expr.h_();
-
-    IntervalImp res(newLo, newStep, newHi, false);
-    return res;    
-  }
-
-  IntervalImp preImage(IntervalImp &set){
-    IntervalImp capRes = image(dom).cap(set);
-    IntervalImp res;
-
-    if(expr.m_() == 0){
-      if(capRes.isIn(expr.h_()))
-        res = dom; 
+  LMapImp1(CTNum g, CTNum o){
+    if(g.size() == o.size()){
+      gain = g;
+      offset = o;
     }
 
     else{
-      LMIntImp1 aux(capRes, expr.invExpr());
-      res = aux.image();
-    }
+      WARNING("Offset and gain should be of the same size");
 
-    return res;
+      CTNum aux;
+      gain = aux;
+      offset = aux;
+    }  
   }
 
-  LMIntImp1 compose(LMIntImp1 &lm2){
-    IntervalImp newDom;
-    LExprImp newExpr = expr.compose(lm2.expr);
+  CTNum gain_(){
+    return gain;
+  }
 
-    if(lm2.m_() == 0){
-      if(dom.isIn(lm2.h_()))
-        newDom = lm2.dom;
+  CTNum off_(){
+    return offset;
+  }
+
+  bool empty(){
+    if(gain.empty() && offset.empty())
+      return true;
+
+    return false;
+  }
+
+  LMapImp1 compose(LMapImp1 &lm2){
+    CTNum resg;
+    CTNumIt itresg = resg.begin();
+    CTNum reso;
+    CTNumIt itreso = reso.begin();
+
+    CTNumIt itg1 = gain.begin();
+    CTNumIt ito1 = offset.begin();
+    CTNumIt itg2 = lm2.gain.begin();
+    CTNumIt ito2 = lm2.offset.begin();
+
+    if(gain.size() == lm2.gain.size()){
+      while(itg1 != gain.end()){
+        itresg = resg.insert(itresg, (*itg1) * (*itg2));
+        ++itresg;
+        itreso = reso.insert(itreso, (*ito2) * (*itg1) + (*ito1));
+        ++itreso;
+
+        ++itg1;
+        ++ito1;
+        ++itg2;
+        ++ito2;
+      } 
     }
 
     else{
-      IntervalImp capRes = dom.cap(lm2.image());
-      LMIntImp1 invLMInt(capRes, lm2.invExpr()); 
-      newDom = invLMInt.dom();
+      WARNING("Linear maps should be of the same size");
+      LMapImp1 aux;
+      return aux;
     }
 
-    return LMIntImp1(newDom, newExpr);
+    return LMapImp1(resg, reso);
   }
 
-  LMIntImp1 miniInv(){
-    IntervalImp newDom;
-    LExprImp newExpr;
+  LMapImp1 invLMap(){
+    CTNum resg;
+    CTNumIt itresg = resg.begin();
+    CTNum reso;
+    CTNumIt itreso = reso.begin();
 
-    if(expr.m_() == 0){
-      newDom = image(dom);
-      newExpr = LExprImp(0, dom.lo_()); 
+    CTNumIt itg1 = gain.begin();
+    CTNumIt ito1 = offset.begin();
+
+    while(itg1 != gain.end()){
+      if((*itg1) != 0){
+        itresg = resg.insert(itresg, 1 / (*itg1));
+        ++itresg;
+
+        itreso = reso.insert(itreso, -(*ito1) / (*itg1));
+        ++itreso;
+      }
+
+      else{
+        itresg = resg.insert(itresg, Inf);
+        itresg++;
+      
+        itreso = reso.insert(itreso, -Inf);
+        ++itreso;
+      }
+
+      ++itg1;
+      ++ito1;
     }
 
-    else{
-      newDom = image(dom);
-      newExpr = expr.invExpr();
-    }
+    return LMapImp1(resg, reso);
+  }
 
-    return LMIntImp1(newDom, newExpr);
+  bool operator==(const LMapImp1 &other) const{
+    return gain == other.gain && offset == other.offset;
   }
 };
 
-template<typename LMIntImp, typename IntervalImp, typename LExprImp>
-struct LMIntAbs{
-  LMIntAbs(){};
-  LMIntAbs(LMIntImp lmap){
+template<template<typename T, typename = std::allocator<T>> class CT,
+         typename LMapImp, typename NumImp>
+struct LMapAbs{
+  typedef CT<NumImp> CTNum;
+  typedef typename CTNum::iterator CTNumIt;
+
+  LMapAbs(){
+    LMapImp aux;
+    lm = aux;
+  }
+  LMapAbs(LMapImp lmap){
     lm = lmap;
   }
-
-  IntervalImp dom_(){
-    return lm.dom_();
+  LMapAbs(CTNum g, CTNum o){
+    lm = LMapImp(g, o);
+  }
+  
+  CTNum gain_(){
+    return lm.gain_();
   }
 
-  LExprImp expr_(){
-    return lm.expr_();
+  CTNum off_(){
+    return lm.off_();
   }
 
-  IntervalImp image(IntervalImp &set){
-    return lm.image(set);
-  }  
+  bool empty(){
+    return lm.empty();
+  }
 
-  IntervalImp preImage(IntervalImp &set){
-    return lm.preImage(set);
+  LMapAbs compose(LMapAbs &lm2){
+    return LMapAbs(lm.compose(lm2.lm));
+  }
+
+  LMapAbs invLMap(){
+    return LMapAbs(lm.invLMap());
   } 
 
-  LMIntAbs compose(LMIntAbs &lm2){
-    return LMIntAbs(lm.compose(lm2.lm));
+  bool operator==(const LMapAbs &other) const{
+    return lm == other.lm;
   }
-
-  LMIntAbs miniInv(){
-    return LMIntAbs(lm.miniInv());
-  } 
 
   private:
-  LMIntImp lm;
+  LMapImp lm;
 };
 
+/*
 template<template<typename T, typename = allocator<T>> class CT,
          typename MultiInterImp, typename IntervalImp, typename LExprImp, typename LMIntImp>
 struct LMMultiIntImp1{
@@ -1297,22 +1514,32 @@ struct LMSetImp1{
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
 
-typedef int NI;
+typedef int NI1;
+typedef float NI2;
 
-typedef IntervalImp1<boost::unordered_set> IntervalImp;
-typedef IntervalAbs<boost::unordered_set, IntervalImp, NI> Interval;
+template<typename T, class = allocator<T>>
+using OrdCT = list<T>;
+
+template<typename Value, typename Hash = boost::hash<Value>, 
+         typename Pred = std::equal_to<Value>, 
+         typename Alloc = std::allocator<Value>>
+using UnordCT = boost::unordered_set<Value>;
+
+
+typedef IntervalImp1<UnordCT> IntervalImp;
+typedef IntervalAbs<UnordCT, IntervalImp, NI1> Interval;
 
 ostream &operator<<(ostream &out, Interval &i){
   out << "[" << i.lo_() << ":" << i.step_() << ":" << i.hi_() << "]";
   return out;
 }
 
-typedef MultiInterImp1<list, boost::unordered_set, Interval, NI> MultiInterImp;
-typedef MultiInterAbs<list, boost::unordered_set, MultiInterImp, Interval, NI> MultiInterval;
+typedef MultiInterImp1<OrdCT, UnordCT, Interval, NI1> MultiInterImp;
+typedef MultiInterAbs<OrdCT, UnordCT, MultiInterImp, Interval, NI1> MultiInterval;
 
 ostream &operator<<(ostream &out, MultiInterval &mi){
-  list<Interval> is = mi.inters_();
-  list<Interval>::iterator it = is.begin();
+  OrdCT<Interval> is = mi.inters_();
+  OrdCT<Interval>::iterator it = is.begin();
 
   if(is.size() == 0)
     return out;
@@ -1333,9 +1560,8 @@ ostream &operator<<(ostream &out, MultiInterval &mi){
   return out;
 }
 
-/*
-typedef AtomSetImp1<list, MultiInterval, NI> AtomSetImp;
-typedef AtomSetAbs<list, AtomSetImp, MultiInterval, NI> AtomSet;
+typedef AtomSetImp1<OrdCT, UnordCT, MultiInterval, NI1> AtomSetImp;
+typedef AtomSetAbs<OrdCT, UnordCT, AtomSetImp, MultiInterval, NI1> AtomSet;
 
 ostream &operator<<(ostream &out, AtomSet &as){
   MultiInterval mi = as.aset_();
@@ -1345,12 +1571,13 @@ ostream &operator<<(ostream &out, AtomSet &as){
   return out;
 }
 
-typedef SetImp1<list, AtomSet> SetImp;
-typedef SetAbs<list, SetImp, AtomSet> Set;
+typedef SetImp1<OrdCT, UnordCT, AtomSet, NI1> SetImp;
+typedef SetAbs<OrdCT, UnordCT, SetImp, AtomSet, NI1> Set;
 
 ostream &operator<<(ostream &out, Set &s){
-  list<AtomSet> as = s.asets_();
-  list<AtomSet>::iterator it = as.begin();
+  UnordCT<AtomSet> as = s.asets_();
+  UnordCT<AtomSet>::iterator it = as.begin();
+  AtomSet aux;
 
   if(as.size() == 0){
     out << "{}";
@@ -1358,44 +1585,45 @@ ostream &operator<<(ostream &out, Set &s){
   }
 
   if(as.size() == 1){
-    out << "{" << *it << "}";
+    aux = *it;
+    out << "{" << aux << "}";
     return out;
   }
 
-  out << *it;
+  aux = *it;
+  out << aux;
   ++it;
   while(next(it, 1) != as.end()){
-    out << "U" << *it;
+    aux = *it;
+    out << "U" << aux;
     ++it;
   }
-  out << "U" << *it;
-
-  return out;
-}
-typedef LExprImp1<list> LExprImp;
-typedef LExprAbs<LExprImp, float> LExpr;
-
-ostream &operator<<(ostream &out, LExpr &le){
-  float m = le.m_();
-  float h = le.h_();
-
-  out << m << " * x + " << h;
+  aux = *it;
+  out << "U" << aux;
 
   return out;
 }
 
-typedef LMIntImp1<list, Interval, LExpr> LMIntImp;
-typedef LMIntAbs<LMIntImp, Interval, LExpr> LMInt;
+typedef LMapImp1<OrdCT, NI2> LMapImp;
+typedef LMapAbs<OrdCT, LMapImp, NI2> LMap;
 
-ostream &operator<<(ostream &out, LMInt &lm){
-  Interval d = lm.dom_();
-  LExpr e = lm.expr_();
+ostream &operator<<(ostream &out, LMap &lm){
+  OrdCT<NI2> g = lm.gain_();
+  OrdCT<NI2>::iterator itg = g.begin();
+  OrdCT<NI2> o = lm.off_();  
+  OrdCT<NI2>::iterator ito = o.begin();
+  
+  while(itg != g.end()){
+    out << *itg << " * x + " << *ito << "\n";
 
-  out << "(" << d << ", " << e << ")";  
+    ++itg;
+    ++ito;
+  }
 
   return out;
 }
 
+/*
 typedef LMMultiIntImp1<list, MultiInterval, Interval, LExpr, LMInt> LMMultIntImp;
 typedef LMMultiIntAbs<list, LMMultiIntImp1<list, MultiInterval, 
                                            Interval, LExpr, LMInt>, MultiInterval, LExpr> LMMultiInt;
@@ -1501,4 +1729,3 @@ typedef SetBasedGraph::edge_descriptor SetEdgeDesc;
 */
 #endif
 
-// TODO: operaciones de igualdad sobre resultado de diferencias
