@@ -40,6 +40,7 @@
 #include <utility>
 
 #include <boost/config.hpp>
+#include <boost/foreach.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional/optional.hpp>
 #include <boost/unordered_set.hpp>
@@ -97,19 +98,18 @@ struct IntervalImp1{
     hi = -1;
     empty = isEmpty;
   };
-  IntervalImp1(int vlo, int vstep, int vhi, bool vempty){ 
+  IntervalImp1(int vlo, int vstep, int vhi){ 
     if(vlo >= 0 && vstep > 0 && vhi >= 0){
-      empty = vempty;
+      empty = false;
       lo = vlo;
       step = vstep;
-     
 
-      if(vlo <= vhi && !vempty && vhi < Inf){
+      if(vlo <= vhi && vhi < Inf){
         int rem = std::fmod(vhi - vlo, vstep); 
         hi = vhi - rem; 
       }
 
-      else if(vlo <= vhi && !vempty && vhi == Inf){
+      else if(vlo <= vhi && vhi == Inf){
         hi = Inf;
       }
 
@@ -117,6 +117,13 @@ struct IntervalImp1{
         WARNING("Wrong values for subscript (check low <= hi)");
         empty = true;
       }
+    }
+
+    else if(vlo >= 0 && vstep == 0 && vhi == vlo){
+      empty = false;
+      lo = vlo;
+      hi = vhi;
+      step = 1; 
     }
 
     else{ 
@@ -177,7 +184,7 @@ struct IntervalImp1{
     if(newLo < 0)
       return IntervalImp1(true);
 
-    return IntervalImp1(newLo, newStep, newEnd, false);
+    return IntervalImp1(newLo, newStep, newEnd);
   }
 
   CT<IntervalImp1> diff(IntervalImp1 &i2){
@@ -189,15 +196,12 @@ struct IntervalImp1{
       return res;
     }
 
-    if(capres == *this){
-      IntervalImp1 aux(true);
-      res.insert(aux);
+    if(capres == *this)
       return res;
-    }
 
     // "Before" intersection
     if(lo < capres.lo){
-      IntervalImp1 aux = IntervalImp1(lo, 1, capres.lo - 1, false);
+      IntervalImp1 aux = IntervalImp1(lo, 1, capres.lo - 1);
       IntervalImp1 left = cap(aux);
       res.insert(left);
     }
@@ -206,14 +210,14 @@ struct IntervalImp1{
     if(capres.step <= (capres.hi - capres.lo)){
       int nInters = capres.step / step;
       for(int i = 1; i < nInters; i++){
-        IntervalImp1 aux = IntervalImp1(capres.lo + i * step, capres.step, capres.hi, false);
+        IntervalImp1 aux = IntervalImp1(capres.lo + i * step, capres.step, capres.hi);
         res.insert(aux);
       }  
     }
 
     // "After" intersection
     if(hi > capres.hi){
-      IntervalImp1 aux = IntervalImp1(capres.hi + 1, 1, hi, false);
+      IntervalImp1 aux = IntervalImp1(capres.hi + 1, 1, hi);
       IntervalImp1 right = cap(aux);
       res.insert(right);
     }
@@ -256,8 +260,8 @@ struct IntervalAbs{
   IntervalAbs(IntervalImp inter){
     i = inter;
   }
-  IntervalAbs(NumImp lo, NumImp step, NumImp hi, bool emp){
-    i = IntervalImp(lo, step, hi, emp);
+  IntervalAbs(NumImp lo, NumImp step, NumImp hi){
+    i = IntervalImp(lo, step, hi);
   }
   IntervalAbs(bool emp){
     i = IntervalImp(emp);
@@ -335,53 +339,76 @@ template<template<typename T, typename = allocator<T>> class CT1,
                   typename Alloc = std::allocator<Value>> class CT2,
          typename IntervalImp, typename NumImp>
 struct MultiInterImp1{
-  CT1<IntervalImp> inters;
   typedef typename CT1<IntervalImp>::iterator IntImpIt;
+
+  CT1<IntervalImp> inters;
+  int ndim;
 
   MultiInterImp1(){
     CT1<IntervalImp> emptyRes;
     inters = emptyRes;  
+    ndim = 0;
   }
   MultiInterImp1(CT1<IntervalImp> is){
-    inters = is;
+    IntImpIt it = is.begin();
+    bool areEmptys = false;
+
+    while(it != is.end()){
+      if((*it).empty_())
+        areEmptys = true;
+
+      ++it;
+    } 
+ 
+    if(areEmptys){
+      WARNING("Empty dimension"); 
+
+      CT1<IntervalImp> aux;
+      inters = aux;
+      ndim = 0;
+    }
+
+    else{
+      inters = is;
+      ndim = is.size();
+    }
   }
 
   CT1<IntervalImp> inters_(){
     return inters;
   }
 
+  int ndim_(){
+    return ndim;
+  }
+
   void addInter(IntervalImp i){
-    inters.insert(inters.end(), i);
+    if(i.empty_())
+      WARNING("Empty dimension");
+
+    else{
+      inters.insert(inters.end(), i);
+      ++ndim;
+    }
   }
 
   bool empty(){
-    IntImpIt it = inters.begin();
-
     if(inters.empty())
       return true;
-
-    while(it != inters.end()){
-      if(!(*it).empty_())
-        return false;
-
-      ++it;
-    }
   
-    return true;
+    return false;
   }
 
   bool isIn(CT1<NumImp> elem){
-    typename CT1<NumImp>::iterator it1 = elem.begin();
     IntImpIt it2 = inters.begin();
 
-    if(elem.size() != inters.size())
+    if((int) elem.size() != ndim)
       return false;
 
-    while(it1 != elem.end()){
-      if(!(*it2).isIn(*it1))
+    BOOST_FOREACH(NumImp n, elem){
+      if(!(*it2).isIn(n))
         return false;      
 
-      ++it1;
       ++it2;
     }
 
@@ -392,29 +419,19 @@ struct MultiInterImp1{
     CT1<IntervalImp> res;
     IntImpIt itres = res.begin();
 
-    IntImpIt it1 = inters.begin();
     IntImpIt it2 = mi2.inters.begin();
-    int sz = inters.size();
-    if(inters.size() == mi2.inters.size()){
-      for(int i = 0; i < sz; ++i){
-        IntervalImp capres = (*it1).cap(*it2);
+    if(ndim == mi2.ndim){
+      BOOST_FOREACH(IntervalImp i1, inters){
+        IntervalImp capres = i1.cap(*it2);
      
-        if(!(*it1).empty_() && !(*it2).empty_()){
-          if(capres.empty_()){
-            CT1<IntervalImp> aux;
-            return MultiInterImp1(aux);
-          }
-
-          itres = res.insert(itres, capres);
-          ++itres;
-        }
-
-        else{
+        if(capres.empty_()){
           CT1<IntervalImp> aux;
           return MultiInterImp1(aux);
         }
 
-        ++it1;
+        itres = res.insert(itres, capres);
+        ++itres;
+
         ++it2;    
       }
     }
@@ -428,6 +445,13 @@ struct MultiInterImp1{
     CT2<MultiInterImp1> resmi;
     typename CT2<MultiInterImp1>::iterator itresmi = resmi.begin();
 
+    if(inters.empty())
+      return resmi;
+
+    if(ndim != mi2.ndim){
+      return resmi;
+    }
+
     if(capres.empty()){
       resmi.insert(*this);
       return resmi;
@@ -436,40 +460,32 @@ struct MultiInterImp1{
     if(inters == capres.inters)
       return resmi;
 
-    IntImpIt it1 = inters.begin();
     IntImpIt itcap = capres.inters.begin();
     CT1<CT2<IntervalImp>> diffs;
     typename CT1<CT2<IntervalImp>>::iterator itdiffs = diffs.begin();
 
-    while(it1 != inters.end()){
-      itdiffs = diffs.insert(itdiffs, (*it1).diff(*itcap));
+    BOOST_FOREACH(IntervalImp i, inters){
+      itdiffs = diffs.insert(itdiffs, i.diff(*itcap));
  
-      ++it1;
       ++itcap;
       ++itdiffs;
     }
 
-    it1 = inters.begin();
+    IntImpIt it1 = inters.begin();
     ++it1;
     itdiffs = diffs.begin();
     
-    while(itdiffs != diffs.end()){
-      CT2<IntervalImp> aux = *itdiffs;
-      typename CT2<IntervalImp>::iterator itaux = aux.begin();
-
-      int i = distance(diffs.begin(), itdiffs);
-
-      while(itaux != aux.end()){
-        IntervalImp auxaux = *itaux;
-
-        if(!auxaux.empty_()){
+    int count = 0;
+    BOOST_FOREACH(CT2<IntervalImp> vdiff, diffs){
+      BOOST_FOREACH(IntervalImp i, vdiff){
+        if(!i.empty_()){
           CT1<IntervalImp> resi;
           IntImpIt itresi = resi.begin();
   
           itcap = capres.inters.begin();
 
-          if(i > 0){
-            for(int j = 0; j < i; j++){
+          if(count > 0){
+            for(int j = 0; j < count; j++){
               itresi = resi.insert(itresi, *itcap);         
               ++itresi; 
 
@@ -477,7 +493,7 @@ struct MultiInterImp1{
             }
           }
 
-          itresi = resi.insert(itresi, *itaux);
+          itresi = resi.insert(itresi, i);
           ++itresi; 
 
           IntImpIt auxit1 = it1;
@@ -491,45 +507,45 @@ struct MultiInterImp1{
           itresmi = resmi.insert(itresmi, MultiInterImp1(resi));
           ++itresmi;
         }
-
-        ++itaux;
       }
 
+      ++count;
       ++it1;
-      ++itdiffs;
     }
 
     return resmi;
   }
 
   MultiInterImp1 crossProd(MultiInterImp1 mi2){
-    IntImpIt it2 = mi2.inters.begin();
+    CT1<IntervalImp> res; 
+    IntImpIt itres = res.begin();
 
-    while(it2 != mi2.inters.end()){
-      inters.insert(inters.end(), *it2);
- 
-      ++it2;
+    BOOST_FOREACH(IntervalImp i, inters){
+      itres = res.insert(itres, i);
+      ++itres;
     }
 
-    return *this;
+    IntImpIt it2 = mi2.inters.begin();
+    BOOST_FOREACH(IntervalImp i, mi2.inters){
+      itres = res.insert(itres, i);
+      ++itres;
+    }
+
+    return MultiInterImp1(res);
   }
 
   CT1<NumImp> minElem(){
-    IntImpIt it = inters.begin();
-
     CT1<NumImp> res;
     typename CT1<NumImp>::iterator itres = res.begin();
 
-    while(it != inters.end()){
-      if((*it).empty_()){
+    BOOST_FOREACH(IntervalImp i, inters){
+      if(i.empty_()){
         CT1<NumImp> aux;
         return aux;
       }
 
-      itres = res.insert(itres, (*it).minElem());
+      itres = res.insert(itres, i.minElem());
       ++itres;
-
-      ++it;
     }    
 
     return res;
@@ -574,12 +590,16 @@ struct MultiInterAbs{
     multiInterImp = MultiInterImp(ints);
   }
 
-  bool empty(){
-    return multiInterImp.empty();
-  }
-
   CT1<IntervalImp> inters_(){
     return multiInterImp.inters_();
+  }
+
+  int ndim_(){
+    return multiInterImp.ndim_();
+  }
+
+  bool empty(){
+    return multiInterImp.empty();
   }
 
   bool isIn(CT1<NumImp> elem){
@@ -596,14 +616,12 @@ struct MultiInterAbs{
 
   CT2<MultiInterAbs> diff(MultiInterAbs &mi2){
     CT2<MultiInterImp> diffRes = multiInterImp.diff(mi2.multiInterImp);
-    typename CT2<MultiInterImp>::iterator it = diffRes.begin();
+
     CT2<MultiInterAbs> res;
 
-    while(it != diffRes.end()){
-      MultiInterAbs aux(*it);
+    BOOST_FOREACH(MultiInterImp mi, diffRes){
+      MultiInterAbs aux(mi);
       res.insert(aux);
-
-      ++it;
     }
 
     return res;
@@ -631,6 +649,7 @@ struct MultiInterAbs{
 
   private:
   MultiInterImp multiInterImp;
+  int ndim;
 };
 
 template<template<typename T, typename = allocator<T>> class CT1,
@@ -651,17 +670,24 @@ template<template<typename T, typename = allocator<T>> class CT1,
          typename MultiInterImp, typename NumImp>
 struct AtomSetImp1{
   MultiInterImp aset;
+  int ndim;
 
   AtomSetImp1(){
     MultiInterImp emptyRes;
     aset = emptyRes;
+    ndim = 0;
   }
   AtomSetImp1(MultiInterImp as){
     aset = as;
+    ndim = as.ndim_();
   }
 
   MultiInterImp aset_(){
     return aset;
+  }
+
+  int ndim_(){
+    return ndim;
   }
 
   bool empty(){
@@ -689,12 +715,9 @@ struct AtomSetImp1{
     } 
 
     else{
-      typename CT2<MultiInterImp>::iterator it = atomicDiff.begin();
-      while(it != atomicDiff.end()){
-        itres = res.insert(itres, AtomSetImp1(*it)); 
+      BOOST_FOREACH(MultiInterImp mi, atomicDiff){
+        itres = res.insert(itres, AtomSetImp1(mi)); 
         ++itres;
-
-        ++it;
       }
     }
 
@@ -753,6 +776,10 @@ struct AtomSetAbs{
     return as.aset_();
   }
 
+  int ndim_(){
+    return as.ndim_();
+  }
+
   bool empty(){
     return as.empty();  
   }
@@ -768,15 +795,13 @@ struct AtomSetAbs{
 
   CT2<AtomSetAbs> diff(AtomSetAbs &aset2){
     CT2<ASetImp> diffRes = as.diff(aset2.as);
-    typename CT2<ASetImp>::iterator it = diffRes.begin();
+
     CT2<AtomSetAbs> res;
     typename CT2<AtomSetAbs>::iterator itRes = res.begin();
 
-    while(it != diffRes.end()){
-      itRes = res.insert(itRes, AtomSetAbs(*it));
+    BOOST_FOREACH(ASetImp as, diffRes){
+      itRes = res.insert(itRes, AtomSetAbs(as));
       ++itRes;
-
-      ++it;
     }
 
     return res;
@@ -804,6 +829,7 @@ struct AtomSetAbs{
 
   private:
   ASetImp as;
+  int ndim;
 };
 
 template<template<typename T, typename = allocator<T>> class CT1,
@@ -827,45 +853,64 @@ struct SetImp1{
   typedef typename SetType::iterator SetIt;
 
   SetType asets;
+  int ndim;
  
   SetImp1(){
     SetType aux;
     asets = aux;
+    ndim = 0;
   }
   SetImp1(SetType ss){
-    asets = ss;
+    ASetImp aux2;
+
+    if(!ss.empty()){
+      aux2 = *(ss.begin());
+      int aux1 = aux2.ndim_();
+      bool equalDims = true;
+      // Check if all atomic sets have the same dimension
+      BOOST_FOREACH(ASetImp as, ss){
+        if(aux1 != as.ndim_())
+          equalDims = false;
+      }
+
+      if(equalDims && aux1 != 0){
+        asets = ss;
+        ndim = aux1; 
+      }
+    
+      else{
+        WARNING("Using atomics sets of different sizes");
+
+        SetType aux3;
+        asets = aux3;
+        ndim = 0;
+      }
+    }
+
+    else{
+      asets = ss;
+      ndim = 0;
+    }
   }
 
   SetType asets_(){
     return asets;
   }
 
-  bool empty(){
-    ASetImp aux;
-    SetIt it = asets.begin();
+  int ndim_(){
+    return ndim;
+  }
 
+  bool empty(){
     if(asets.empty())
       return true;
-
-    while(it != asets.end()){
-      aux = *it;
-
-      if(!aux.empty())
-        return false;
-
-      ++it;
-    }
   
-    return true;
+    return false;
   }
 
   bool isIn(CT1<NumImp> elem){
-    ASetImp aux;
-    SetIt it = asets.begin();
-
-    while(it != asets.end()){
-      aux = *it;
-      if(aux.isIn(elem))
+    BOOST_FOREACH(ASetImp as, asets){
+      if(as.isIn(elem))
         return true;
     }
 
@@ -873,8 +918,16 @@ struct SetImp1{
   }
 
   void addAtomSet(ASetImp &aset2){
-    if(!aset2.empty())
+    if(!aset2.empty() && aset2.ndim_() == ndim && !asets.empty())
       asets.insert(aset2);
+
+    else if(!aset2.empty() && asets.empty()){
+      asets.insert(aset2);
+      ndim = aset2.ndim_();
+    }
+ 
+    else
+      WARNING("Atomic sets should have the same dimension");
   }
 
   void addAtomSets(SetType &sets2){
@@ -893,71 +946,48 @@ struct SetImp1{
   SetImp1 cap(SetImp1 &set2){
     ASetImp aux1, aux2;
 
-    if(empty() || set2.empty()){
-      SetType emptyRes;
+    if(asets.empty() || set2.asets.empty()){
+      SetImp1 emptyRes;
       return emptyRes; 
     }
     
     SetType res;
-    SetIt it1 = asets.begin();
 
-    while(it1 != asets.end()){
-      aux1 = *it1;
-
-      SetIt it2 = set2.asets.begin();
-
-      while(it2 != set2.asets.end()){
-        aux2 = *it2;
-        res.insert(aux1.cap(aux2));
-
-        ++it2;
+    BOOST_FOREACH(ASetImp as1, asets){
+      BOOST_FOREACH(ASetImp as2, set2.asets){
+        ASetImp capres = as1.cap(as2);
+      
+        if(!capres.empty())
+          res.insert(capres);
       }
-     
-      ++it1;
     }
 
-    return res;
+    return SetImp1(res);
   }
 
   SetImp1 diff(SetImp1 &set2){
-    ASetImp aux1, aux2, aux3;
-
     SetImp1 res;
     SetType capres = cap(set2).asets; 
 
     if(!capres.empty()){
       SetIt it1 = asets.begin();
 
-      while(it1 != asets.end()){
-        aux1 = *it1;
+      BOOST_FOREACH(ASetImp as1, asets){
         SetType aux;
-        aux.insert(aux1);
+        aux.insert(as1);
  
-        SetIt it2 = capres.begin();
-        while(it2 != capres.end()){
-          aux2 = *it2;
-
+        BOOST_FOREACH(ASetImp as2, capres){
           SetImp1 newSets;
 
-          SetIt itaux = aux.begin();
-          while(itaux != aux.end()){
-            aux3 = *itaux;
-
-            SetType diffres = (aux3).diff(aux2);
+          BOOST_FOREACH(ASetImp as3, aux){
+            SetType diffres = as3.diff(as2);
             newSets.addAtomSets(diffres);
-
-            ++itaux;
           }
 
           aux = newSets.asets;
-           
-
-          ++it2;
         }
 
         res.addAtomSets(aux);
-
-        ++it1;
       }
     }
 
@@ -968,86 +998,64 @@ struct SetImp1{
   }
 
   SetImp1 cup(SetImp1 &set2){
-    SetImp1 resDiff = diff(set2);
-
-    if(!resDiff.empty())
-      addAtomSets(resDiff);
-
-    return SetImp1(asets);
-  }
-
-  SetImp1 crossProd(SetImp1 &set2){
-    ASetImp aux1;
-    ASetImp aux2;
-    SetIt it1 = asets.begin();
-    SetIt it2 = set2.asets.begin();
-
-    SetType res;
-
-    while(it1 != asets.end()){
-      aux1 = *it1;
-
-      while(it2 != set2.asets.end()){
-        aux2 = *it2;
- 
-        ASetImp auxres = aux1.crossProd(aux2);
-        res.addAtomSet(auxres);
-
-        ++it2;
-      }
- 
-      ++it1;
-    }
+    SetImp1 res;
+  
+    res.addAtomSets(asets);
+    res.addAtomSets(set2.asets);
 
     return res;
   }
 
-  CT1<NumImp> minElem(){
-    SetIt it = asets.begin();
-    ASetImp aux1;
+  SetImp1 crossProd(SetImp1 &set2){
+    SetType res;
 
+    BOOST_FOREACH(ASetImp as1, asets.end){
+      BOOST_FOREACH(ASetImp as2, set2.asets){
+        ASetImp auxres = as1.crossProd(as2);
+        res.addAtomSet(auxres);
+      }
+    }
+
+    return SetImp1(res);
+  }
+
+  CT1<NumImp> minElem(){
     CT2<CT1<NumImp>> mins;
     typename CT2<CT1<NumImp>>::iterator itmins = mins.begin();
 
-    while(it != asets.end()){
-      aux1 = *it;
-
-      itmins = mins.insert(itmins, aux1.minElem());
+    // Get each min element of each atomic set
+    BOOST_FOREACH(ASetImp as1, asets){
+      itmins = mins.insert(itmins, as1.minElem());
       ++itmins;
-
-      ++it;
     }
 
     bool hasValue = false;
     CT1<NumImp> res;
-    CT1<NumImp> aux2;
   
     itmins = mins.begin();
-    while(itmins != mins.end()){
-      aux2 = *itmins;
-
-      if(!hasValue && !aux2.empty()){
-        res = aux2;
+    BOOST_FOREACH(CT1<NumImp> n2, mins){
+      // Set initial minimum
+      if(!hasValue && !n2.empty()){
+        res = n2;
         hasValue = true;
       }
 
-      if(hasValue && !aux2.empty()){
-        typename CT1<NumImp>::iterator it1 = res.begin();
-        typename CT1<NumImp>::iterator it2 = aux2.begin();
+      // Check if there is another element lower than our current min
+      if(hasValue && !n2.empty()){
+        typename CT1<NumImp>::iterator it2 = n2.begin();
 
-        while(it1 != res.end()){
-          if(*it2 < *it1)
-            res = aux2;
+        // Find the first component in which they differ. It determines
+        // which one is lower.
+        BOOST_FOREACH(NumImp n1, res){
+          if(*it2 < n1)
+            res = n2;
 
-          else if(*it1 < *it2)
+          else if(n1 < *it2)
             break;
 
-          ++it1;
           ++it2;
         }
       }      
-
-      ++itmins;
     }
 
     return res;
@@ -1105,6 +1113,10 @@ struct SetAbs{
     return set.asets_();
   }
 
+  int ndim_(){
+    return set.ndim_();
+  }
+
   void addAtomSet(ASetImp &aset2){
     set.addAtomSet(aset2); 
   }
@@ -1147,6 +1159,7 @@ struct SetAbs{
 
   private:
   SetImp set;
+  int ndim;
 };
 
 template<template<typename T, typename = allocator<T>> class CT1,
@@ -1168,25 +1181,49 @@ struct LMapImp1{
 
   CTNum gain;
   CTNum offset;
+  int ndim;
 
   LMapImp1(){
-    CTNum aux;
-    gain = aux;
-    offset = aux;
+    CTNum aux1;
+    CTNum aux2;
+    gain = aux2;
+    offset = aux1;
+    ndim = 0;
   }
   LMapImp1(CTNum g, CTNum o){
     if(g.size() == o.size()){
       gain = g;
       offset = o;
+      ndim = g.size();
     }
 
     else{
       WARNING("Offset and gain should be of the same size");
 
-      CTNum aux;
-      gain = aux;
-      offset = aux;
+      CTNum aux1;
+      CTNum aux2;
+      gain = aux2;
+      offset = aux1;
+      ndim = 0;
     }  
+  }
+  // Constructs the id of LMaps
+  LMapImp1(int dim){
+    CTNum g;
+    CTNumIt itg = g.begin();
+    CTNum o;
+    CTNumIt ito = o.begin();
+
+    for(int i = 0; i < dim; i++){
+      itg = g.insert(itg, 1.0);
+      ++itg;
+      ito = o.insert(ito, 0);
+      ++ito;
+    }
+
+    gain = g;
+    offset = o;
+    ndim = dim;
   }
 
   CTNum gain_(){
@@ -1197,11 +1234,21 @@ struct LMapImp1{
     return offset;
   }
 
+  int ndim_(){
+    return ndim;
+  }
+
   bool empty(){
     if(gain.empty() && offset.empty())
       return true;
 
     return false;
+  }
+
+  void addGO(NumImp g, NumImp o){
+    gain.insert(gain.end(), g);
+    offset.insert(offset.end(), o);
+    ++ndim;
   }
 
   LMapImp1 compose(LMapImp1 &lm2){
@@ -1210,19 +1257,17 @@ struct LMapImp1{
     CTNum reso;
     CTNumIt itreso = reso.begin();
 
-    CTNumIt itg1 = gain.begin();
     CTNumIt ito1 = offset.begin();
     CTNumIt itg2 = lm2.gain.begin();
     CTNumIt ito2 = lm2.offset.begin();
 
-    if(gain.size() == lm2.gain.size()){
-      while(itg1 != gain.end()){
-        itresg = resg.insert(itresg, (*itg1) * (*itg2));
+    if(ndim == lm2.ndim){
+      BOOST_FOREACH(NumImp g1i, gain){
+        itresg = resg.insert(itresg, g1i * (*itg2));
         ++itresg;
-        itreso = reso.insert(itreso, (*ito2) * (*itg1) + (*ito1));
+        itreso = reso.insert(itreso, (*ito2) * g1i + (*ito1));
         ++itreso;
 
-        ++itg1;
         ++ito1;
         ++itg2;
         ++ito2;
@@ -1247,30 +1292,29 @@ struct LMapImp1{
     CTNumIt itg1 = gain.begin();
     CTNumIt ito1 = offset.begin();
 
-    while(itg1 != gain.end()){
-      if((*itg1) != 0){
-        itresg = resg.insert(itresg, 1 / (*itg1));
+    BOOST_FOREACH(NumImp g1i, gain){
+      if(g1i != 0){
+        itresg = resg.insert(itresg, 1 / g1i);
         ++itresg;
 
-        itreso = reso.insert(itreso, -(*ito1) / (*itg1));
+        itreso = reso.insert(itreso, -(*ito1) / g1i);
         ++itreso;
       }
 
       else{
         itresg = resg.insert(itresg, Inf);
-        itresg++;
+        ++itresg;
       
         itreso = reso.insert(itreso, -Inf);
         ++itreso;
       }
 
-      ++itg1;
       ++ito1;
     }
 
     return LMapImp1(resg, reso);
   }
-
+ 
   bool operator==(const LMapImp1 &other) const{
     return gain == other.gain && offset == other.offset;
   }
@@ -1292,6 +1336,9 @@ struct LMapAbs{
   LMapAbs(CTNum g, CTNum o){
     lm = LMapImp(g, o);
   }
+  LMapAbs(int dim){
+    lm = LMapImp(dim); 
+  }
   
   CTNum gain_(){
     return lm.gain_();
@@ -1301,8 +1348,16 @@ struct LMapAbs{
     return lm.off_();
   }
 
+  int ndim_(){
+    return lm.ndim_();
+  }
+
   bool empty(){
     return lm.empty();
+  }
+
+  void addGO(NumImp g, NumImp o){
+    lm.addGO(g, o);
   }
 
   LMapAbs compose(LMapAbs &lm2){
@@ -1319,194 +1374,436 @@ struct LMapAbs{
 
   private:
   LMapImp lm;
+  int ndim;
 };
 
-/*
-template<template<typename T, typename = allocator<T>> class CT,
-         typename MultiInterImp, typename IntervalImp, typename LExprImp, typename LMIntImp>
-struct LMMultiIntImp1{
-  MultiInterImp dom;
-  CT<LExprImp> expr; 
+// Piecewise atomic linear maps -----------------------------------------------------------------
 
-  LMMultiIntImp1(){};
-  LMMultiIntImp1(MultiInterImp d, CT<LExprImp> e){
-    if(e.size() >= d.ints_().size()){
-      dom = d;
-      expr = e;
+template<template<typename T, typename = allocator<T>> class CT,
+         typename LMapImp, typename ASetImp, typename MultiInterImp, typename IntervalImp, 
+         typename NumImp1, typename NumImp2>
+struct PWAtomLMapImp1{
+  ASetImp dom;
+  LMapImp lmap;
+
+  PWAtomLMapImp1(){}
+  PWAtomLMapImp1(ASetImp d, LMapImp l){
+    ASetImp aux1;
+    LMapImp aux2;
+
+    if(d.ndim_() != l.ndim_()){
+      WARNING("Atomic set and map should be of the same dimension");
+
+      dom = aux1;
+      lmap = aux2;
     }
 
-    else
-      cerr << "Expression dimension should be larger than domain dimension";
+    else{
+      CT<IntervalImp> ints = d.aset_().inters_(); 
+      CT<NumImp2> g = l.gain_();
+      typename CT<NumImp2>::iterator itg = g.begin();
+      CT<NumImp2> o = l.off_();
+      typename CT<NumImp2>::iterator ito = o.begin();
+      bool uncompatible = false;
+
+      CT<IntervalImp> auxdom;
+      typename CT<IntervalImp>::iterator itd = auxdom.begin();
+
+      BOOST_FOREACH(IntervalImp i, ints){
+        NumImp2 auxLo = i.lo_() * (*itg) + (*ito); 
+        NumImp2 auxStep = i.step_() * (*itg);
+        NumImp2 auxHi = i.hi_() * (*itg) + (*ito);
+
+        if(*itg < Inf){
+          if(auxLo != (int) auxLo && i.lo_()){
+            WARNING("Incompatible map");
+            uncompatible = true;
+          }
+
+          if(auxStep != (int) auxStep && i.step_()){
+            WARNING("Incompatible map");
+            uncompatible = true;
+          }
+
+          if(auxHi != (int) auxHi && i.hi_()){
+            WARNING("Incompatible map");
+            uncompatible = true;
+          }
+
+          ++itg;
+          ++ito;
+        }
+      }
+
+      if(uncompatible){
+        dom = aux1;
+        lmap = aux2;
+      }
+
+      else{
+        dom = d; 
+        lmap = l;
+      }
+    }
   }
 
-  MultiInterImp dom_(){
+  ASetImp dom_(){
     return dom;
   }
 
-  CT<LExprImp> expr_(){
-    return expr;
+  LMapImp lmap_(){
+    return lmap;
   }
 
-  MultiInterImp image(MultiInterImp &set){
-    typename CT<IntervalImp>::iterator itdom = dom.ints_().begin();
-    typename CT<LExprImp>::iterator itexpr = expr.begin();
+  bool empty(){
+    return dom.empty() && lmap.empty();
+  }
+ 
+  ASetImp image(ASetImp &s){
+    CT<IntervalImp> inters = (s.cap(dom)).aset_().inters_(); 
+    CT<NumImp2> g = lmap.gain_();
+    typename CT<NumImp2>::iterator itg = g.begin();
+    CT<NumImp2> o = lmap.off_();
+    typename CT<NumImp2>::iterator ito = o.begin();
 
     CT<IntervalImp> res;
     typename CT<IntervalImp>::iterator itres = res.begin();
 
-    while(itdom != dom.ints().end()){
-      LMIntImp aux(*itdom, *itexpr);
-      itres = res.insert(itres, aux.image(set));
-      ++itres;
-
-      ++itdom;
-      ++itexpr;
+    if(dom.empty()){
+      ASetImp aux2;
+      return aux2;
     }
 
-    return MultiInterImp(res);
+    BOOST_FOREACH(IntervalImp capi, inters){
+      NumImp1 newLo;
+      NumImp1 newStep;
+      NumImp1 newHi;
+
+      if(*itg < Inf){
+        if(capi.lo_() == Inf)
+          newLo = Inf;
+        else 
+          newLo = capi.lo_() * (*itg) + (*ito);
+
+        if(capi.step_() == Inf)
+          newStep = Inf;
+        else
+          newStep = capi.step_() * (*itg);
+
+        if(capi.hi_() == Inf)
+          newHi = Inf;
+        else 
+          newHi = capi.hi_() * (*itg) + (*ito);
+      }
+
+      else{
+        newLo = 1;
+        newStep = 1;
+        newHi = Inf;
+      }
+
+      IntervalImp aux1(newLo, newStep, newHi); 
+      itres = res.insert(itres, aux1);
+      ++itres;
+
+      ++itg;
+      ++ito;
+    }
+
+    MultiInterImp aux2(res);
+    return ASetImp(aux2);
   } 
 
-  MultiInterImp preImage(MultiInterImp &set){
-    typename CT<IntervalImp>::iterator itdom = dom.ints_().begin();
-    typename CT<LExprImp>::iterator itexpr = expr.begin();
+  ASetImp preImage(ASetImp &s){
+    ASetImp fullIm = image(dom);
+    ASetImp actualIm = fullIm.cap(s);
+    PWAtomLMapImp1 inv(actualIm, lmap.invLMap());  
 
-    CT<IntervalImp> res;
-    typename CT<IntervalImp>::iterator itres = res.begin();
-
-    while(itdom != dom.ints().end()){
-      LMIntImp aux(*itdom, *itexpr);
-      itres = res.insert(itres, aux.preImage(set));
-      ++itres;
-
-      ++itdom;
-      ++itexpr;
-    }
-
-    return MultiInterImp(res);
+    ASetImp aux = inv.image(actualIm);
+    return dom.cap(aux);
   }
 
-  LMMultiIntImp1 compose(LMMultiIntImp1 &lm2){
-    typename CT<IntervalImp>::iterator itdom1 = dom.ints_().begin();
-    typename CT<IntervalImp>::iterator itdom2 = lm2.dom.ints_().begin();
-    typename CT<LExprImp>::iterator itexpr1 = expr.begin();
-    typename CT<LExprImp>::iterator itexpr2 = lm2.expr.begin();
-
-    CT<IntervalImp> resDom;
-    typename CT<IntervalImp>::iterator itresdom = resDom.begin();
-    CT<LExprImp> resExpr;
-    typename CT<IntervalImp>::iterator itresexpr = resExpr.begin();
-
-    while(itdom2 != lm2.dom.ints().end()){
-      LMIntImp aux1(*itdom1, *itexpr1);
-      LMIntImp aux2(*itdom2, *itexpr2);
-
-      LMIntImp res = aux1.compose(aux2);
-      itresdom = resDom.insert(itresdom, res.dom_());
-      ++itresdom;
-      itresexpr = resExpr.insert(itresexpr, res.expr_());
-      ++itresexpr;
-
-      ++itdom1;
-      ++itdom2;
-      ++itexpr1;
-      ++itexpr2;
-    }
-
-    MultiInterImp aux(resDom);
-    return LMMultiIntImp1(resDom, resExpr);
-  } 
-
-  LMMultiIntImp1 miniInv(){
-    typename CT<IntervalImp>::iterator itdom = dom.ints_().begin();
-    typename CT<LExprImp>::iterator itexpr = expr.begin();
-
-    CT<IntervalImp> resDom;
-    typename CT<IntervalImp>::iterator itresdom = resDom.begin();
-    CT<LExprImp> resExpr;
-    typename CT<LExprImp>::iterator itresexpr = resExpr.begin();
-
-    while(itdom != dom.ints_().end()){
-      LMIntImp res(*itdom, *itexpr);
-      LMIntImp inv = res.miniInv();
-
-      itresdom = resDom.insert(itresdom, inv.dom_());
-      ++itresdom;
-      itresexpr = resExpr.insert(itresexpr, inv.expr_());
-      ++itresexpr;
-
-      ++itdom;
-      ++itexpr;
-    }
-
-    MultiInterImp aux(resDom);
-    return LMMultiIntImp1(aux, resExpr);
+  bool operator==(const PWAtomLMapImp1 &other) const{
+    return dom == other.dom && lmap == other.lmap;
   }
 };
 
-template<template<typename T, typename = allocator<T>> class CT,
-         typename LMMultiIntImp, typename MultiInterImp, typename LExprImp>
-struct LMMultiIntAbs{
-  LMMultiIntAbs(){};
-  LMMultiIntAbs(LMMultiIntImp lmap){
-    lm = lmap;
+template<typename PWAtomLMapImp, typename LMapImp, typename ASetImp>
+struct PWAtomLMapAbs{
+  PWAtomLMapAbs(){}
+  PWAtomLMapAbs(ASetImp d, LMapImp l){
+    pw = PWAtomLMapImp(d, l);
+  }
+  PWAtomLMapAbs(PWAtomLMapImp &pwatom){
+    pw = pwatom;
   }
 
-  MultiInterImp dom_(){
-    return lm.dom_();
+  ASetImp dom_(){
+    return pw.dom_();
   }
 
-  CT<LExprImp> expr_(){
-    return lm.expr_();
+  LMapImp lmap_(){
+    return pw.lmap_();
   }
 
-  MultiInterImp image(MultiInterImp &set){
-    return lm.image();
-  } 
-
-  MultiInterImp preImage(MultiInterImp &set){
-    return lm.preImage();
+  bool empty(){
+    return pw.empty();
   }
 
-  LMMultiIntAbs compose(LMMultiIntAbs &lm2){
-    return LMMultiIntAbs(lm.compose(lm2.lm));
-  } 
+  ASetImp image(ASetImp &s){
+   return pw.image(s);
+  }
 
-  LMMultiIntAbs miniInv(){
-    return LMMultiIntAbs(lm.miniInv());
+  ASetImp preImage(ASetImp &s){
+    return pw.preImage(s);
+  }
+
+  bool operator==(const PWAtomLMapAbs &other){
+    return pw == other.pw;
   }
 
   private:
-  LMMultiIntImp lm;
+  PWAtomLMapImp pw; 
 };
 
-template<template<typename T, typename = allocator<T>> class CT,
-         typename SetImp, typename ASetImp, typename MultiInterImp, typename LExprImp>
-struct LMSetImp1{
-  SetImp dom;
-  CT<CT<LExprImp>> expr;
+// Piecewise linear maps ------------------------------------------------------------------------
 
-  LMSetImp1(){};
-  LMSetImp1(SetImp d, CT<LExprImp> e){
-    if(e.size() >= d.ints_().size()){
-      dom = d;
-      expr = e;
+template<template<typename T, class = allocator<T>> class CT1,
+         template<typename Value, typename Hash = boost::hash<Value>, 
+                  typename Pred = std::equal_to<Value>, 
+                  typename Alloc = std::allocator<Value>> class CT2,
+         typename PWAtomLMapImp, typename LMapImp, typename SetImp, typename ASetImp>
+struct PWLMapImp1{
+  typedef CT1<SetImp> CTSet;
+  typedef typename CT1<SetImp>::iterator CTSetIt;
+  typedef CT1<LMapImp> CTLMap;
+  typedef typename CT1<LMapImp>::iterator CTLMapIt;
+
+  CT1<SetImp> dom; 
+  CT1<LMapImp> lmap;  
+
+  PWLMapImp1(){}
+  PWLMapImp1(CTSet d, CTLMap l){
+    CTLMapIt itl = l.begin();
+    int auxndim = (*(d.begin())).ndim_();
+    bool different = false;
+   
+    if(d.size() == l.size()){
+      BOOST_FOREACH(SetImp sd, d){
+        if(sd.ndim_() != auxndim || (*itl).ndim_() != auxndim)
+          different = true;
+
+        ++itl; 
+      }
+
+      if(different){
+        WARNING("Sets and maps should have the same dimension");
+
+        CTSet aux1;
+        CTLMap aux2;
+        dom = aux1;
+        lmap = aux2;
+      }
+
+      else{
+        dom = d;
+        lmap = l;
+      }
     }
 
-    else
-      cerr << "Expression dimension should be larger than domain expression";
+    else{
+      WARNING("Domain size should be equal to map size");
+
+      CTSet aux1;
+      CTLMap aux2;
+      dom = aux1;
+      lmap = aux2;     
+    }
+  }
+  // Id PWLMap, the set stays the same, the map is the id map
+  PWLMapImp1(SetImp &s){
+    CTSet d;
+    CTLMap lm;
+
+    LMapImp aux(s.ndim_());    
+
+    d.insert(d.begin(), s);
+    lm.insert(lm.begin(), aux);
+
+    dom = d;
+    lmap = lm;
   }
 
-  SetImp image(SetImp &set){
-    CT<ASetImp> adom = dom.asets_(); 
-    typename CT<ASetImp>::iterator itadom = adom.begin();
-    typename CT<CT<LExprImp>>::iterator itexpr = expr.begin();
+  CTSet dom_(){
+    return dom;
+  }
 
-    while(itadom != adom.end()){
-      MultiInterImp mi = (*itadom).aset_();
+  CTLMap lmap_(){
+    return lmap;
+  }
+
+  bool empty(){
+    return dom.empty() && lmap.empty();
+  }
+
+  void addSetLM(SetImp s, LMapImp lm){
+    dom.insert(dom.end(), s);
+    lmap.insert(lmap.end(), lm);
+    PWLMapImp1 auxpw(dom, lmap);
+
+    dom = auxpw.dom;
+    lmap = auxpw.lmap;
+  }
+
+  SetImp image(SetImp &s){
+    CTLMapIt itl = lmap.begin(); 
+
+    SetImp res;
+
+    BOOST_FOREACH(SetImp ss, dom){
+      SetImp aux1 = ss.cap(s);
+      SetImp partialRes;
+      
+      CT2<ASetImp> aux1as = aux1.asets_();
+      BOOST_FOREACH(ASetImp as, aux1as){
+        PWAtomLMapImp auxMap(as, *itl);
+        ASetImp aux2 = auxMap.image(as);
+        partialRes.addAtomSet(aux2);
+      } 
+
+      res = res.cup(partialRes);
+
+      ++itl;
     }
+
+    return res;
+  }
+
+  SetImp preImage(SetImp &s){
+    CTLMapIt itl = lmap.begin();
+
+    SetImp res;
+
+    BOOST_FOREACH(SetImp ss, dom){
+       SetImp partialRes;
+
+       CT2<ASetImp> ssas = ss.asets_();
+       BOOST_FOREACH(ASetImp as1, ssas){
+         PWAtomLMapImp auxMap(as1, *itl);
+         
+         CT2<ASetImp> sas = s.asets_();
+         BOOST_FOREACH(ASetImp as2, sas){
+           ASetImp aux2 = auxMap.preImage(as2);
+           partialRes.addAtomSet(aux2);
+         }
+       }
+
+       res = res.cup(partialRes);
+ 
+       ++itl;
+    }
+
+    return res;
+  } 
+
+  PWLMapImp1 compPW(PWLMapImp1 &pw2){
+    CTLMapIt itlm1 = lmap.begin();
+    CTLMapIt itlm2 = pw2.lmap.begin();     
+ 
+    CTSet ress;
+    CTSetIt itress = ress.begin();
+    CTLMap reslm;
+    CTLMapIt itreslm = reslm.begin();
+
+    SetImp auxDom;
+    SetImp newDom;
+
+    BOOST_FOREACH(SetImp d1, dom){
+      itlm2 = pw2.lmap.begin();     
+
+      BOOST_FOREACH(SetImp d2, pw2.dom){
+        auxDom = pw2.image(d2);
+        auxDom = auxDom.cap(d1);
+        auxDom = pw2.preImage(auxDom);
+        newDom = auxDom.cap(d2); 
+
+        if(!newDom.empty()){
+          LMapImp newLM((*itlm1).compose(*itlm2));
+
+          itress = ress.insert(itress, newDom);
+          ++itress;
+          itreslm = reslm.insert(itreslm, newLM); 
+          ++itreslm; 
+        }
+
+        ++itlm2;
+      }
+
+      ++itlm1;
+    }
+
+    return PWLMapImp1(ress, reslm);
+  }
+
+  bool operator==(const PWLMapImp1 &other) const{
+    return dom == other.dom && lmap == other.lmap;
   }
 };
-*/
+
+template<template<typename T, class = allocator<T>> class CT,
+         typename PWLMapImp, typename LMapImp, typename SetImp>
+struct PWLMapAbs{
+  typedef CT<SetImp> CTSet;
+  typedef CT<LMapImp> CTLMap;
+
+  PWLMapAbs(){}
+  PWLMapAbs(CTSet d, CTLMap l){
+    pw = PWLMapImp(d, l);
+  }
+  PWLMapAbs(SetImp &s){
+    pw = PWLMapImp(s);
+  }
+  PWLMapAbs(PWLMapImp &pwimp){
+    pw = pwimp;
+  }
+
+  CTSet dom_(){
+    return pw.dom_();
+  }
+
+  CTLMap lmap_(){
+    return pw.lmap_();
+  }
+
+  bool empty(){
+    return pw.empty();
+  }
+
+  void addSetLM(SetImp s, LMapImp lm){
+    pw.addSetLM(s, lm);
+  }
+
+  SetImp image(SetImp &s){
+    return pw.image(s);
+  }
+
+  SetImp preImage(SetImp &s){
+    return pw.preImage(s);
+  }
+
+  PWLMapAbs compPW(PWLMapAbs &pw2){
+    PWLMapImp aux = pw.compPW(pw2.pw);
+    return PWLMapAbs(aux);
+  }
+
+  bool operator==(const PWLMapAbs &other) const{
+    return pw == other.pw;
+  }
+
+  private:
+  PWLMapImp pw;
+};
+
 
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
@@ -1612,6 +1909,9 @@ ostream &operator<<(ostream &out, LMap &lm){
   OrdCT<NI2>::iterator itg = g.begin();
   OrdCT<NI2> o = lm.off_();  
   OrdCT<NI2>::iterator ito = o.begin();
+
+  if(g.size() == 0)
+    return out;
   
   while(itg != g.end()){
     out << *itg << " * x + " << *ito << "\n";
@@ -1623,31 +1923,123 @@ ostream &operator<<(ostream &out, LMap &lm){
   return out;
 }
 
-/*
-typedef LMMultiIntImp1<list, MultiInterval, Interval, LExpr, LMInt> LMMultIntImp;
-typedef LMMultiIntAbs<list, LMMultiIntImp1<list, MultiInterval, 
-                                           Interval, LExpr, LMInt>, MultiInterval, LExpr> LMMultiInt;
+typedef PWAtomLMapImp1<OrdCT, LMap, AtomSet, MultiInterval, Interval, NI1, NI2> PWAtomLMapImp;
+typedef PWAtomLMapAbs<PWAtomLMapImp, LMap, AtomSet> PWAtomLMap;
 
+ostream &operator<<(ostream &out, PWAtomLMap &pwatom){
+  AtomSet d = pwatom.dom_();
+  LMap lm = pwatom.lmap_();
+ 
+  OrdCT<NI2> g = lm.gain_();
+  OrdCT<NI2>::iterator itg = g.begin();
+  OrdCT<NI2> o = lm.off_();
+  OrdCT<NI2>::iterator ito = o.begin();
 
-ostream &operator<<(ostream &out, LMMultiInt &lm){
-  MultiInterval d = lm.dom_();
-  list<LExpr> e = lm.expr_();
-  list<LExpr>::iterator it = e.begin();
+  OrdCT<Interval> ints = d.aset_().inters_();
+  OrdCT<Interval>::iterator itints = ints.begin();
 
-  out << "(" << d << ", (";
-  while(next(it, 1) != e.end()){
-    out << *it << ",";
-    ++it;
+  if(ints.size() == 0)
+    return out;
+
+  if(ints.size() == 1){
+    out << "(" << *(itints) << ", " << *itg << " * x + " << *ito << ")";
+    return out;
   }
-  out << "))";
+
+  out << "(" << *(itints) << ", " << *itg << " * x + " << *ito << ")";
+  out << "x";
+  ++itints;
+  ++itg;
+  ++ito;
+  while(next(itints, 1) != ints.end()){
+    out << "(" << *itints << ", " << *itg << " * x + " << *ito << ")";
+    out << "x";
+
+    ++itints;
+    ++itg;
+    ++ito;
+  }
+  out << "(" << *itints << ", " << *itg << " * x + " << *ito << ")";
+
+
+  return out; 
+}
+
+typedef PWLMapImp1<OrdCT, UnordCT, PWAtomLMap, LMap, Set, AtomSet> PWLMapImp;
+typedef PWLMapAbs<OrdCT, PWLMapImp, LMap, Set> PWLMap;
+
+ostream &auxSetLMap(ostream &out, Set &s, LMap &lm){
+  UnordCT<AtomSet> as = s.asets_();
+  UnordCT<AtomSet>::iterator itas = as.begin();
+
+  if(as.size() == 0)
+    out << "{}";
+
+  else if(as.size() == 1){
+    PWAtomLMap auxMap(*itas, lm);  
+    out << "{" << auxMap << "}";
+    return out;
+  }
+
+  AtomSet auxAS = *itas;
+
+  PWAtomLMap aux(auxAS, lm);
+
+  out << "{" << aux << "}";
+  ++itas;
+  while(next(itas, 1) != as.end()){
+    auxAS = *itas;
+    aux = PWAtomLMap(auxAS, lm);
+    out << "U" << "{" << aux << "}";
+
+    ++itas;
+  }
+  auxAS = *itas;
+  aux = PWAtomLMap(auxAS, lm);
+  out << "U" << "{" << aux << "}";
 
   return out;
 }
 
-typedef LMMultiInt LMap;
+ostream &operator<<(ostream &out, PWLMap &pw){
+  OrdCT<Set> d = pw.dom_();
+  OrdCT<Set>::iterator itd = d.begin();
+  OrdCT<LMap> l = pw.lmap_();
+  OrdCT<LMap>::iterator itl = l.begin();
+
+  if(d.size() == 0){
+    out << "[]";
+    return out;
+  }
+
+  if(d.size() == 1){
+    out << "[";
+    auxSetLMap(out, *itd, *itl) << "]";
+    return out;
+  }
+
+
+  out << "[";
+  auxSetLMap(out, *itd, *itl);
+  ++itd;
+  ++itl;
+  while(next(itd, 1) != d.end()){
+    out << ",";
+    auxSetLMap(out, *itd, *itl);
+
+    ++itd;
+    ++itl;
+  }
+  out << ",";
+  auxSetLMap(out, *itd, *itl);
+  out << "]";
+
+  return out;
+}
 
 // ------ Graph definition ------ //
 
+/*
 struct SetVertex{
   SetVertex(){};
   SetVertex(string nm, Set v); 

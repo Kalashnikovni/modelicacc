@@ -38,61 +38,58 @@ typedef UnordCT<AtomSet> contAS;
 typedef OrdCT<NI1> contNI1;
 typedef OrdCT<NI2> contNI2;
 
+typedef OrdCT<Set> contSet1;
+typedef OrdCT<LMap> contLM1;
+
 //____________________________________________________________________________//
 
 // -- Intervals --------------------------------------------------------------//
 
 void TestIntCreation1(){
-  Interval i(10, 3, 3, false);
+  Interval i(10, 3, 3);
 
   BOOST_CHECK(i.empty_() == true);
 }
 
 void TestIntCreation2(){
-  Interval i(10, 20, 15, false);
+  Interval i(10, 20, 15);
 
   BOOST_CHECK(i.hi_() == 10);
 }
 
 void TestIntCreation3(){
-  Interval i(10, 5, 23, false);
+  Interval i(10, 5, 23);
 
   BOOST_CHECK(i.hi_() == 20);
 }
 
 void TestIntCreation4(){
-  Interval i(10, 1, Inf, false);
+  Interval i(10, 1, Inf);
 
   BOOST_CHECK(i.hi_() == Inf);
 }
 
 void TestIntQuery1(){
-  Interval i(10, 2, 20, false);
+  Interval i(10, 2, 20);
 
   BOOST_CHECK(!i.isIn(13));
 }
 
 void TestIntQuery2(){
-  Interval i(10, 2, 20, false);
+  Interval i(10, 2, 20);
 
   BOOST_CHECK(i.isIn(18));
 }
 
 void TestIntQuery3(){
-  Interval i(10, 2, 20, false);
+  Interval i(10, 2, 20);
 
   BOOST_CHECK(!i.isIn(100));
 }
 
 void TestIntQuery4(){
-  Interval i(10, 2, 20, true);
-
-  BOOST_CHECK(!i.isIn(16));
-}
-
-void TestIntQuery5(){
-  Interval i1(10, 2, 20, false);
-  Interval i2(0, 3, 25, false);
+  Interval i1(10, 2, 20);
+  Interval i2(0, 3, 25);
 
   bool b1 = i1.isIn(12);
   bool b2 = i2.isIn(12);
@@ -100,7 +97,7 @@ void TestIntQuery5(){
   BOOST_CHECK(b1 && b2);
 }
 
-void TestIntQuery6(){
+void TestIntQuery5(){
   Interval i(true);
 
   BOOST_CHECK(!i.isIn(10));
@@ -108,8 +105,8 @@ void TestIntQuery6(){
 
 // Cap should be commutative
 void TestIntCap1(){
-  Interval i1(10, 2, 20, false);
-  Interval i2(0, 3, 25, false);
+  Interval i1(10, 2, 20);
+  Interval i2(0, 3, 25);
 
   Interval i3(i1.cap(i2));
   Interval i4(i2.cap(i1));
@@ -118,19 +115,19 @@ void TestIntCap1(){
 }
 
 void TestIntCap2(){
-  Interval i1(10, 2, 20, false);
-  Interval i2(0, 3, 25, false);
+  Interval i1(10, 2, 20);
+  Interval i2(0, 3, 25);
 
   Interval i3 = i1.cap(i2);
 
-  Interval i4(12, 6, 18, false);
+  Interval i4(12, 6, 18);
 
   BOOST_CHECK(i3 == i4);
 }
 
 void TestIntCap3(){
-  Interval i1(14, 2, 16, false);
-  Interval i2(12, 3, 15, false);
+  Interval i1(14, 2, 16);
+  Interval i2(12, 3, 15);
 
   Interval i3 = i1.cap(i2);
 
@@ -140,20 +137,26 @@ void TestIntCap3(){
 }
 
 void TestIntCap4(){
-  Interval i1(14, 2, 28, false);
-  Interval i2(0, 1, Inf, false);
+  Interval i1(14, 2, 28);
+  Interval i2(0, 1, Inf);
 
   Interval i3 = i1.cap(i2);
  
-  Interval i4(14, 2, 28, false);
-
-  IntervalImp tryDen;
+  Interval i4(14, 2, 28);
 
   BOOST_CHECK(i3 == i4);
 }
 
+void TestIntCap5(){
+  Interval i1(1, 1, 10);
+  
+  Interval i2 = i1.cap(i1);
+
+  BOOST_CHECK(i1 == i2);
+}
+
 void TestIntDiff1(){
-  Interval i1(0, 2, 30, false);
+  Interval i1(0, 2, 30);
   Interval i2(true);
   
   contInt1 res1 = i1.diff(i2);
@@ -165,13 +168,15 @@ void TestIntDiff1(){
 }
 
 void TestIntDiff2(){
-  Interval i1(0, 2, 30, false);
-  Interval i2(10, 3, 40, false);
+  Interval i1(0, 2, 30);
+  Interval i2(10, 3, 40);
 
-  Interval i3(0, 2, 8, false);
-  Interval i4(12, 6, 24, false);
-  Interval i5(14, 6, 26, false);
-  Interval i6(30, 2, 30, false);
+  contInt1 res1 = i1.diff(i2);
+
+  Interval i3(0, 2, 8);
+  Interval i4(12, 6, 24);
+  Interval i5(14, 6, 26);
+  Interval i6(30, 2, 30);
 
   contInt1 res2; 
   res2.insert(i3);
@@ -179,17 +184,19 @@ void TestIntDiff2(){
   res2.insert(i5);
   res2.insert(i6);
 
-  BOOST_CHECK(i1.diff(i2) == res2);
+  BOOST_CHECK(res1 == res2);
 }
 
 void TestIntDiff3(){
-  Interval i1(0, 2, Inf, false);
-  Interval i2(10, 3, 40, false);
+  Interval i1(0, 2, Inf);
+  Interval i2(10, 3, 40);
 
-  Interval i3(0, 2, 8, false);
-  Interval i4(12, 6, 36, false);
-  Interval i5(14, 6, 38, false);
-  Interval i6(42, 2, Inf, false);
+  contInt1 res1 = i1.diff(i2);
+
+  Interval i3(0, 2, 8);
+  Interval i4(12, 6, 36);
+  Interval i5(14, 6, 38);
+  Interval i6(42, 2, Inf);
 
   contInt1 res2; 
   res2.insert(i3);
@@ -197,21 +204,22 @@ void TestIntDiff3(){
   res2.insert(i5);
   res2.insert(i6);
 
-  BOOST_CHECK(i1.diff(i2) == res2);
+  BOOST_CHECK(res1 == res2);
 }
 
 void TestIntDiff4(){
-  Interval i1(0, 1, 10, false);
+  Interval i1(0, 1, 10);
   Interval i2(true);
 
-  contInt1 res2;
-  res2.insert(i2);
+  contInt1 res1 = i1.diff(i1);
 
-  BOOST_CHECK(i1.diff(i1) == res2);
+  contInt1 res2;
+
+  BOOST_CHECK(res1 == res2);
 }
 
 void TestIntMin1(){
-  Interval i(10, 3, 40, false);
+  Interval i(10, 3, 40);
 
   NI1 res1 = i.minElem();
 
@@ -220,13 +228,24 @@ void TestIntMin1(){
 
 // -- MultiIntervals --------------------------------------------------------------//
 void TestMultiCreation1(){
-  Interval i1(true);
-  Interval i2(0, 2, 50, false);
-  Interval i3(3, 1, 5, false);
-  Interval i4(3, 8, 24, false);
+  Interval i1(1, 1, 10);
+  Interval i2(true);
+
+  MultiInterval res1;
+  res1.addInter(i1);
+  res1.addInter(i2);
+  res1.addInter(i2);
+
+  BOOST_CHECK(!res1.empty());
+}
+
+void TestMultiCreation2(){
+  Interval i1(1, 1, 10);
+  Interval i2(0, 2, 50);
+  Interval i3(3, 1, 5);
+  Interval i4(3, 8, 24);
 
   MultiInterval mi1;
-  
   mi1.addInter(i1);
   mi1.addInter(i2);
   mi1.addInter(i3);
@@ -234,14 +253,13 @@ void TestMultiCreation1(){
 
   contInt2 res;
   contInt2::iterator it = res.begin();
-
   it = res.insert(it, i1);
   ++it;
   it = res.insert(it, i2);
   ++it;
   it = res.insert(it, i3);
   ++it;
-  it = res.insert(it, i4);
+  res.insert(it, i4);
 
   MultiInterval mi2(res);
 
@@ -260,7 +278,6 @@ void TestMultiEmpty2(){
   Interval i3(true);
 
   MultiInterval mi;
-
   mi.addInter(i1);
   mi.addInter(i2);
   mi.addInter(i3);
@@ -270,11 +287,10 @@ void TestMultiEmpty2(){
 
 void TestMultiEmpty3(){
   Interval i1(true);
-  Interval i2(0, 1, 10, false);
+  Interval i2(0, 1, 10);
   Interval i3(true);
 
   MultiInterval mi;
-
   mi.addInter(i1);
   mi.addInter(i2);
   mi.addInter(i3);
@@ -283,9 +299,9 @@ void TestMultiEmpty3(){
 }
 
 void TestMultiQuery1(){
-  Interval i1(1, 1, 10, false);
+  Interval i1(1, 1, 10);
   Interval i2(true);
-  Interval i3(10, 2, 21, false);
+  Interval i3(10, 2, 21);
 
   MultiInterval mi;
   mi.addInter(i1);
@@ -304,9 +320,9 @@ void TestMultiQuery1(){
 }
 
 void TestMultiQuery2(){
-  Interval i1(1, 1, 10, false);
-  Interval i2(10, 20, 10, false);
-  Interval i3(10, 2, 21, false);
+  Interval i1(1, 1, 10);
+  Interval i2(10, 20, 10);
+  Interval i3(10, 2, 21);
 
   MultiInterval mi;
   mi.addInter(i1);
@@ -325,9 +341,9 @@ void TestMultiQuery2(){
 }
 
 void TestMultiQuery3(){
-  Interval i1(1, 1, 10, false);
-  Interval i2(10, 20, 10, false);
-  Interval i3(10, 2, 21, false);
+  Interval i1(1, 1, 10);
+  Interval i2(10, 20, 10);
+  Interval i3(10, 2, 21);
 
   MultiInterval mi;
   mi.addInter(i1);
@@ -346,25 +362,26 @@ void TestMultiQuery3(){
 }
 
 void TestMultiAddInter1(){
-  Interval i1(0, 2, 10, false);
-  MultiInterval mi1;
+  Interval i1(0, 2, 10);
 
+  MultiInterval mi1;
   mi1.addInter(i1);  
 
   contInt2 ints2;
   contInt2::iterator it2 = ints2.begin();
   ints2.insert(it2, i1);
+
   MultiInterval mi2(ints2); 
 
   BOOST_CHECK(mi1 == mi2);
 }
 
 void TestMultiAddInter2(){
-  Interval i1(0, 2, 10, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
-  MultiInterval mi1;
+  Interval i1(0, 2, 10);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
+  MultiInterval mi1;
   mi1.addInter(i1);  
   mi1.addInter(i2);
   mi1.addInter(i3);
@@ -376,17 +393,18 @@ void TestMultiAddInter2(){
   it2 = ints2.insert(it2, i2);
   ++it2;
   ints2.insert(it2, i3);
+
   MultiInterval mi2(ints2); 
 
   BOOST_CHECK(mi1 == mi2);
 }
 
 void TestMultiCap1(){
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
-  MultiInterval mi1;
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
+  MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i2);
   mi1.addInter(i3);
@@ -400,18 +418,18 @@ void TestMultiCap1(){
 }
 
 void TestMultiCap2(){
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
   MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i2);
   mi1.addInter(i3);
 
-  Interval i4(5, 3, 15, false);
+  Interval i4(5, 3, 15);
   Interval i5(true);
-  Interval i6(27, 1, 35, false);
+  Interval i6(27, 1, 35);
 
   MultiInterval mi2;
   mi2.addInter(i4);
@@ -429,14 +447,14 @@ void TestMultiCap2(){
 }
 
 void TestMultiCap3(){
-  Interval i1(1, 1, 10, false);
+  Interval i1(1, 1, 10);
 
   MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i1);
   mi1.addInter(i1);
 
-  Interval i2(30, 1, 40, false);
+  Interval i2(30, 1, 40);
 
   MultiInterval mi2;
   mi2.addInter(i1);
@@ -448,19 +466,32 @@ void TestMultiCap3(){
   BOOST_CHECK(mi3.empty());
 }
 
+void TestMultiCap4(){
+  Interval i1(1, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  MultiInterval mi2 = mi1.cap(mi1);
+
+  BOOST_CHECK(mi1 == mi2);
+}
+
 void TestMultiDiff1(){
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
   MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i2);
   mi1.addInter(i3);
 
-  Interval i4(5, 3, 15, false);
-  Interval i5(30, 2, 30, false);
-  Interval i6(27, 1, 35, false);
+  Interval i4(5, 3, 15);
+  Interval i5(30, 2, 30);
+  Interval i6(27, 1, 35);
 
   MultiInterval mi2;
   mi2.addInter(i4);
@@ -470,44 +501,44 @@ void TestMultiDiff1(){
   contMulti res1 = mi1.diff(mi2);
   contMulti::iterator it1 = res1.begin();
 
-  Interval i7(0, 2, 6, false);
+  Interval i7(0, 2, 6);
  
   MultiInterval mi3;
   mi3.addInter(i7);
   mi3.addInter(i2);
   mi3.addInter(i3);
 
-  Interval i8(10, 6, 10, false);
+  Interval i8(10, 6, 10);
 
   MultiInterval mi4;
   mi4.addInter(i8);
   mi4.addInter(i2);
   mi4.addInter(i3);
 
-  Interval i9(12, 6, 12, false);
+  Interval i9(12, 6, 12);
 
   MultiInterval mi5;
   mi5.addInter(i9);
   mi5.addInter(i2);
   mi5.addInter(i3);
 
-  Interval i10(16, 2, 20, false);
+  Interval i10(16, 2, 20);
 
   MultiInterval mi6;
   mi6.addInter(i10);
   mi6.addInter(i2);
   mi6.addInter(i3);
 
-  Interval i11(8, 6, 14, false);
-  Interval i12(32, 2, 40, false);
+  Interval i11(8, 6, 14);
+  Interval i12(32, 2, 40);
 
   MultiInterval mi7;
   mi7.addInter(i11);
   mi7.addInter(i12);
   mi7.addInter(i3);
 
-  Interval i13(30, 2, 30, false);
-  Interval i14(25, 1, 26, false);
+  Interval i13(30, 2, 30);
+  Interval i14(25, 1, 26);
 
   MultiInterval mi8;
   mi8.addInter(i11);
@@ -526,18 +557,18 @@ void TestMultiDiff1(){
 }
 
 void TestMultiDiff2(){
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
   MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i2);
   mi1.addInter(i3);
 
-  Interval i4(5, 3, 15, false);
-  Interval i5(30, 2, 30, false);
-  Interval i6(25, 1, 35, false);
+  Interval i4(5, 3, 15);
+  Interval i5(30, 2, 30);
+  Interval i6(25, 1, 35);
 
   MultiInterval mi2;
   mi2.addInter(i4);
@@ -547,36 +578,36 @@ void TestMultiDiff2(){
   contMulti res1 = mi1.diff(mi2);
   contMulti::iterator it1 = res1.begin();
 
-  Interval i7(0, 2, 6, false);
+  Interval i7(0, 2, 6);
  
   MultiInterval mi3;
   mi3.addInter(i7);
   mi3.addInter(i2);
   mi3.addInter(i3);
 
-  Interval i8(10, 6, 10, false);
+  Interval i8(10, 6, 10);
 
   MultiInterval mi4;
   mi4.addInter(i8);
   mi4.addInter(i2);
   mi4.addInter(i3);
 
-  Interval i9(12, 6, 12, false);
+  Interval i9(12, 6, 12);
 
   MultiInterval mi5;
   mi5.addInter(i9);
   mi5.addInter(i2);
   mi5.addInter(i3);
 
-  Interval i10(16, 2, 20, false);
+  Interval i10(16, 2, 20);
 
   MultiInterval mi6;
   mi6.addInter(i10);
   mi6.addInter(i2);
   mi6.addInter(i3);
 
-  Interval i11(8, 6, 14, false);
-  Interval i12(32, 2, 40, false);
+  Interval i11(8, 6, 14);
+  Interval i12(32, 2, 40);
 
   MultiInterval mi7;
   mi7.addInter(i11);
@@ -595,15 +626,15 @@ void TestMultiDiff2(){
 
 void TestMultiDiff3(){
   Interval i1(true);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
   
   MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i2);
   mi1.addInter(i3);
 
-  Interval i4(5, 3, 14, false);
+  Interval i4(5, 3, 14);
   Interval i5(true);
   Interval i6(true);
 
@@ -612,19 +643,14 @@ void TestMultiDiff3(){
   mi2.addInter(i5);
   mi2.addInter(i6);
 
-  Interval i7(true);
-  Interval i8(32, 6, 38, false);
-  Interval i9(true);
-
   contMulti res1 = mi1.diff(mi2);
-  contMulti::iterator it1 = res1.begin();
 
-  BOOST_CHECK(true);
+  BOOST_CHECK(res1.empty());
 }
 
 void TestMultiDiff4(){
-  Interval i1(1, 1, 10, false);
-  Interval i2(20, 3, 33, false);
+  Interval i1(1, 1, 10);
+  Interval i2(20, 3, 33);
 
   MultiInterval mi1;
   mi1.addInter(i1);
@@ -636,15 +662,15 @@ void TestMultiDiff4(){
 }
 
 void TestMultiDiff5(){
-  Interval i1(1, 1, 10, false);
-  Interval i2(2, 2, 20, false);
+  Interval i1(1, 1, 10);
+  Interval i2(2, 2, 20);
 
   MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i2);
 
-  Interval i3(1, 1, 15, false);
-  Interval i4(2, 2, 40, false);
+  Interval i3(1, 1, 15);
+  Interval i4(2, 2, 40);
 
   MultiInterval mi2;
   mi2.addInter(i3);
@@ -656,15 +682,15 @@ void TestMultiDiff5(){
 }
 
 void TestMultiCrossProd1(){
-  Interval i1(1, 1, 10, false);
-  Interval i2(2, 2, 40, false);
+  Interval i1(1, 1, 10);
+  Interval i2(2, 2, 40);
 
   MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i2);
 
-  Interval i3(3, 3, 20, false);
-  Interval i4(1, 50, Inf, false);
+  Interval i3(3, 3, 20);
+  Interval i4(1, 50, Inf);
 
   MultiInterval mi2;
   mi2.addInter(i3);
@@ -682,9 +708,9 @@ void TestMultiCrossProd1(){
 }
 
 void TestMultiMin1(){
-  Interval i1(0, 1, 40, false);
-  Interval i2(15, 3, 18, false);
-  Interval i3(50, 2, 70, false);
+  Interval i1(0, 1, 40);
+  Interval i2(15, 3, 18);
+  Interval i3(50, 2, 70);
 
   MultiInterval mi;
 
@@ -710,9 +736,9 @@ void TestMultiMin1(){
 
 void TestASetCreation1(){
   Interval i1(true);
-  Interval i2(0, 2, 50, false);
-  Interval i3(3, 1, 5, false);
-  Interval i4(3, 8, 24, false);
+  Interval i2(0, 2, 50);
+  Interval i3(3, 1, 5);
+  Interval i4(3, 8, 24);
 
   MultiInterval mi;
 
@@ -734,9 +760,9 @@ void TestASetEmpty1(){
 
 void TestASetEmpty2(){
   Interval i1(true);
-  Interval i2(0, 2, 50, false);
-  Interval i3(3, 1, 5, false);
-  Interval i4(3, 8, 24, false);
+  Interval i2(0, 2, 50);
+  Interval i3(3, 1, 5);
+  Interval i4(3, 8, 24);
 
   MultiInterval mi;
 
@@ -768,7 +794,7 @@ void TestASetEmpty3(){
 void TestASetEmpty4(){
   Interval i1(true);
   Interval i2(true);
-  Interval i3(1, 1, 10, false);
+  Interval i3(1, 1, 10);
 
   MultiInterval mi;
   mi.addInter(i1);
@@ -781,9 +807,9 @@ void TestASetEmpty4(){
 }
 
 void TestASetCap1(){
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
   MultiInterval mi1;
   mi1.addInter(i1);
@@ -792,9 +818,9 @@ void TestASetCap1(){
 
   AtomSet as1(mi1);
 
-  Interval i4(5, 3, 15, false);
+  Interval i4(5, 3, 15);
   Interval i5(true);
-  Interval i6(27, 1, 35, false);
+  Interval i6(27, 1, 35);
 
   MultiInterval mi2;
   mi2.addInter(i4);
@@ -811,10 +837,25 @@ void TestASetCap1(){
   BOOST_CHECK(res1 == res2 && res2 == res3);
 }
 
+void TestASetCap2(){
+  Interval i1(1, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  AtomSet as2 = as1.cap(as1);
+
+  BOOST_CHECK(as1 == as2);
+}
+
 void TestASetDiff1(){
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
   MultiInterval mi1;
   mi1.addInter(i1);
@@ -823,9 +864,9 @@ void TestASetDiff1(){
 
   AtomSet as1(mi1);
 
-  Interval i4(5, 3, 15, false);
-  Interval i5(30, 2, 30, false);
-  Interval i6(27, 1, 35, false);
+  Interval i4(5, 3, 15);
+  Interval i5(30, 2, 30);
+  Interval i6(27, 1, 35);
 
   MultiInterval mi2;
   mi2.addInter(i4);
@@ -836,7 +877,7 @@ void TestASetDiff1(){
 
   contAS res1 = as1.diff(as2);
 
-  Interval i7(0, 2, 6, false);
+  Interval i7(0, 2, 6);
 
   MultiInterval mi3;
   mi3.addInter(i7);
@@ -845,7 +886,7 @@ void TestASetDiff1(){
 
   AtomSet as3(mi3);
 
-  Interval i8(10, 6, 10, false);
+  Interval i8(10, 6, 10);
 
   MultiInterval mi4;
   mi4.addInter(i8);
@@ -854,7 +895,7 @@ void TestASetDiff1(){
 
   AtomSet as4(mi4);
 
-  Interval i9(12, 6, 12, false);
+  Interval i9(12, 6, 12);
 
   MultiInterval mi5;
   mi5.addInter(i9);
@@ -863,7 +904,7 @@ void TestASetDiff1(){
 
   AtomSet as5(mi5);
 
-  Interval i10(16, 2, 20, false);
+  Interval i10(16, 2, 20);
 
   MultiInterval mi6;
   mi6.addInter(i10);
@@ -872,8 +913,8 @@ void TestASetDiff1(){
 
   AtomSet as6(mi6);
 
-  Interval i11(8, 6, 14, false);
-  Interval i12(32, 2, 40, false);
+  Interval i11(8, 6, 14);
+  Interval i12(32, 2, 40);
 
   MultiInterval mi7;
   mi7.addInter(i11);
@@ -882,8 +923,8 @@ void TestASetDiff1(){
 
   AtomSet as7(mi7);
 
-  Interval i13(30, 2, 30, false);
-  Interval i14(25, 1, 26, false);
+  Interval i13(30, 2, 30);
+  Interval i14(25, 1, 26);
 
   MultiInterval mi8;
   mi8.addInter(i11);
@@ -904,9 +945,9 @@ void TestASetDiff1(){
 }
 
 void TestASetMin1(){
-  Interval i1(0, 1, 40, false);
-  Interval i2(15, 3, 18, false);
-  Interval i3(50, 2, 70, false);
+  Interval i1(0, 1, 40);
+  Interval i2(15, 3, 18);
+  Interval i3(50, 2, 70);
 
   MultiInterval mi;
 
@@ -933,22 +974,20 @@ void TestASetMin1(){
 // -- Sets -------------------------------------------------------------------//
 
 void TestSetCreation1(){
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
   MultiInterval mi1;
-
   mi1.addInter(i1);
   mi1.addInter(i2);
   mi1.addInter(i3);
 
   AtomSet as1(mi1);
 
-  Interval i4(0, 1, 10, false);
+  Interval i4(0, 1, 10);
 
   MultiInterval mi2;
-
   mi2.addInter(i4);
   mi2.addInter(i4);
   mi2.addInter(i4);
@@ -960,10 +999,8 @@ void TestSetCreation1(){
   s1.addAtomSet(as2);
 
   contAS res2;
-  contAS::iterator it2 = res2.begin();
-  it2 = res2.insert(it2, as1);
-  ++it2;
-  res2.insert(it2, as2);
+  res2.insert(as1);
+  res2.insert(as2);
 
   Set s2(res2);
 
@@ -971,7 +1008,7 @@ void TestSetCreation1(){
 }
 
 void TestCompSets1(){
-  Interval i1(0, 1, 10, false);
+  Interval i1(0, 1, 10);
   
   MultiInterval mi1;
   mi1.addInter(i1);
@@ -981,7 +1018,7 @@ void TestCompSets1(){
   Set s1;
   s1.addAtomSet(as1);
 
-  Interval i2(0, 1, 20, false);
+  Interval i2(0, 1, 20);
 
   MultiInterval mi2;
   mi2.addInter(i2);
@@ -995,12 +1032,11 @@ void TestCompSets1(){
 }
 
 void TestSetEmpty1(){
-  Interval i7(0, 1, Inf, false);
-  Interval i8(20, 3, 50, false);
+  Interval i7(0, 1, Inf);
+  Interval i8(20, 3, 50);
   Interval i9(true);
 
   MultiInterval mi3;
-
   mi3.addInter(i7);
   mi3.addInter(i8);
   mi3.addInter(i9);
@@ -1008,27 +1044,26 @@ void TestSetEmpty1(){
   AtomSet as3(mi3);
 
   Set s2;
-
   s2.addAtomSet(as3);
 
   BOOST_CHECK(!s2.empty());
 }
 
 void TestAddASets1(){
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
-  MultiInterval mi1;
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
+  MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i2);
   mi1.addInter(i3);
 
-  Interval i4(5, 3, 15, false);
+  Interval i4(5, 3, 15);
   Interval i5(true);
-  Interval i6(27, 1, 35, false);
-  MultiInterval mi2;
+  Interval i6(27, 1, 35);
 
+  MultiInterval mi2;
   mi2.addInter(i4);
   mi2.addInter(i5);
   mi2.addInter(i6);
@@ -1043,9 +1078,7 @@ void TestAddASets1(){
 
   contAS aux;
   contAS::iterator itaux = aux.begin();
-  itaux = aux.insert(itaux, as1);
-  ++itaux;
-  aux.insert(itaux, as2); 
+  aux.insert(itaux, as1);
 
   Set s2(aux);
 
@@ -1065,9 +1098,9 @@ void TestSetCap1(){
 void TestSetCap2(){
   Set s1;
 
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
   MultiInterval mi1;
   mi1.addInter(i1);
@@ -1087,18 +1120,18 @@ void TestSetCap2(){
 }
 
 void TestSetCap3(){
-  Interval i1(0, 2, 20, false);
-  Interval i2(30, 2, 40, false);
-  Interval i3(25, 1, 30, false);
+  Interval i1(0, 2, 20);
+  Interval i2(30, 2, 40);
+  Interval i3(25, 1, 30);
 
   MultiInterval mi1;
   mi1.addInter(i1);
   mi1.addInter(i2);
   mi1.addInter(i3);
 
-  Interval i4(5, 3, 15, false);
-  Interval i5(35, 3, 40, false);
-  Interval i6(27, 1, 35, false);
+  Interval i4(5, 3, 15);
+  Interval i5(35, 3, 40);
+  Interval i6(27, 1, 35);
 
   MultiInterval mi2;
   mi2.addInter(i4);
@@ -1112,9 +1145,9 @@ void TestSetCap3(){
   s1.addAtomSet(as1);
   s1.addAtomSet(as2);
 
-  Interval i7(0, 1, Inf, false);
-  Interval i8(20, 3, 50, false);
-  Interval i9(28, 1, 28, false);
+  Interval i7(0, 1, Inf);
+  Interval i8(20, 3, 50);
+  Interval i9(28, 1, 28);
 
   MultiInterval mi3;
   mi3.addInter(i7);
@@ -1129,8 +1162,8 @@ void TestSetCap3(){
   Set res1 = s1.cap(s2);
   Set res2 = s2.cap(s1);
 
-  Interval i10(0, 2, 20, false);
-  Interval i11(32, 6, 38, false);
+  Interval i10(0, 2, 20);
+  Interval i11(32, 6, 38);
 
   MultiInterval mi4;
   mi4.addInter(i10);
@@ -1153,9 +1186,37 @@ void TestSetCap3(){
   BOOST_CHECK(res1 == res2 && res2 == res3);
 }
 
+void TestSetCap4(){
+  Interval i1(1, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(15, 1, 20);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  Set s2 = s1.cap(s1);
+
+  BOOST_CHECK(s1 == s2);
+}
+
 void TestSetDiff1(){
-  Interval i1(0, 1, 10, false);
-  Interval i2(0, 3, 9, false);
+  Interval i1(0, 1, 10);
+  Interval i2(0, 3, 9);
 
   MultiInterval mi1;
   mi1.addInter(i1);
@@ -1166,8 +1227,8 @@ void TestSetDiff1(){
   Set s1;
   s1.addAtomSet(as1);
 
-  Interval i3(0, 1, 10, false);
-  Interval i4(0, 3, 9, false);
+  Interval i3(0, 1, 10);
+  Interval i4(0, 3, 9);
 
   MultiInterval mi2;
   mi2.addInter(i3);
@@ -1186,7 +1247,7 @@ void TestSetDiff1(){
 
 void TestSetMin1(){
   Interval i1(true);
-  Interval i2(5, 1, 10, false);
+  Interval i2(5, 1, 10);
 
   MultiInterval mi1;
   mi1.addInter(i1);
@@ -1194,8 +1255,8 @@ void TestSetMin1(){
 
   AtomSet as1(mi1);
 
-  Interval i3(20, 20, 80, false);
-  Interval i4(1, 1, 500, false);
+  Interval i3(20, 20, 80);
+  Interval i4(1, 1, 500);
 
   MultiInterval mi2;
   mi2.addInter(i3);
@@ -1203,8 +1264,49 @@ void TestSetMin1(){
 
   AtomSet as2(mi2);
 
-  Interval i5(30, 5, 36, false);
-  Interval i6(42, 3, 57, false);
+  Interval i5(30, 5, 36);
+  Interval i6(42, 3, 57);
+
+  MultiInterval mi3;
+  mi3.addInter(i5);
+  mi3.addInter(i6);  
+
+  AtomSet as3(mi3);
+
+  Set s;
+  s.addAtomSet(as1);
+  s.addAtomSet(as2);
+  s.addAtomSet(as3);
+
+  contNI1 res1 = s.minElem();
+
+  contNI1 res2;
+  res2.insert(res2.end(), 5);
+
+  BOOST_CHECK(res1 == res2);   
+}
+
+void TestSetMin2(){
+  Interval i1(30, 1, 35);
+  Interval i2(5, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+
+  AtomSet as1(mi1);
+
+  Interval i3(20, 20, 80);
+  Interval i4(1, 1, 500);
+
+  MultiInterval mi2;
+  mi2.addInter(i3);
+  mi2.addInter(i4);
+
+  AtomSet as2(mi2);
+
+  Interval i5(30, 5, 36);
+  Interval i6(42, 3, 57);
 
   MultiInterval mi3;
   mi3.addInter(i5);
@@ -1229,129 +1331,46 @@ void TestSetMin1(){
 // -- LinearMaps -------------------------------------------------------------------//
 
 void TestLMCreation1(){
-  contNI2 g1;
-  contNI2::iterator itg1 = g1.begin();
-
-  itg1 = g1.insert(itg1, 2);
-  ++itg1;
-  itg1 = g1.insert(itg1, 3);
-  ++itg1;
-  itg1 = g1.insert(itg1, 4);
-
-  contNI2 o1;
-  contNI2::iterator ito1 = o1.begin();
-
-  ito1 = o1.insert(ito1, 7);
-  ++ito1;
-  o1.insert(ito1, 8);
-
-  LMap res(g1, o1);
+  LMap res;
 
   BOOST_CHECK(res.empty());
 }
 
 void TestLMCompose1(){
-  contNI2 g1;
-  contNI2::iterator itg1 = g1.begin();
-  
-  itg1 = g1.insert(itg1, 5);
-  ++itg1;
-  itg1 = g1.insert(itg1, 10);
-  ++itg1;
-  itg1 = g1.insert(itg1, 3);
+  LMap lm1;
 
-  contNI2 o1;
-  contNI2::iterator ito1 = o1.begin();
+  lm1.addGO(5, 1);
+  lm1.addGO(10, 2);
+  lm1.addGO(3, 3);
 
-  ito1 = o1.insert(ito1, 1);
-  ++ito1;
-  ito1 = o1.insert(ito1, 2);
-  ++ito1;
-  ito1 = o1.insert(ito1, 3);
+  LMap lm2;
 
-  LMap lm1(g1, o1);
-
-  contNI2 g2;
-  contNI2::iterator itg2 = g2.begin();
-
-  itg2 = g2.insert(itg2, 2);
-  ++itg2;
-  itg2 = g2.insert(itg2, 2);
-  ++itg2;
-  itg2 = g2.insert(itg2, 2);
-
-  contNI2 o2;
-  contNI2::iterator ito2 = o2.begin();
-
-  ito2 = o2.insert(ito2, 3);
-  ++ito2;
-  ito2 = o2.insert(ito2, 3);
-  ++ito2;
-  ito2 = o2.insert(ito2, 3);
-
-  LMap lm2(g2, o2);
+  lm2.addGO(2, 3);
+  lm2.addGO(2, 3);
+  lm2.addGO(2, 3);
 
   LMap res1 = lm1.compose(lm2);
 
-  contNI2 g3;
-  contNI2::iterator itg3 = g3.begin();
+  LMap res2;
 
-  itg3 = g3.insert(itg3, 10);
-  ++itg3;
-  itg3 = g3.insert(itg3, 20);
-  ++itg3;
-  itg3 = g3.insert(itg3, 6);
-
-  contNI2 o3;
-  contNI2::iterator ito3 = o3.begin();
-
-  ito3 = o3.insert(ito3, 16);
-  ++ito3;
-  ito3 = o3.insert(ito3, 32);
-  ++ito3;
-  o3.insert(ito3, 12);
-
-  LMap res2(g3, o3);
+  res2.addGO(10, 16);
+  res2.addGO(20, 32);
+  res2.addGO(6, 12);
 
   BOOST_CHECK(res1 == res2);
 }
 
 void TestLMCompose2(){
-  contNI2 g1;
-  contNI2::iterator itg1 = g1.begin();
-  
-  itg1 = g1.insert(itg1, 5);
-  ++itg1;
-  itg1 = g1.insert(itg1, 10);
-  ++itg1;
-  itg1 = g1.insert(itg1, 3);
+  LMap lm1;
 
-  contNI2 o1;
-  contNI2::iterator ito1 = o1.begin();
+  lm1.addGO(5, 1);
+  lm1.addGO(10, 2);
+  lm1.addGO(3, 3);
 
-  ito1 = o1.insert(ito1, 1);
-  ++ito1;
-  ito1 = o1.insert(ito1, 2);
-  ++ito1;
-  ito1 = o1.insert(ito1, 3);
+  LMap lm2;
 
-  LMap lm1(g1, o1);
-
-  contNI2 g2;
-  contNI2::iterator itg2 = g2.begin();
-
-  itg2 = g2.insert(itg2, 2);
-  ++itg2;
-  itg2 = g2.insert(itg2, 2);
-
-  contNI2 o2;
-  contNI2::iterator ito2 = o2.begin();
-
-  ito2 = o2.insert(ito2, 3);
-  ++ito2;
-  ito2 = o2.insert(ito2, 3);
-
-  LMap lm2(g2, o2);
+  lm2.addGO(2, 3);
+  lm2.addGO(2, 3);
 
   LMap res1 = lm1.compose(lm2);
 
@@ -1359,51 +1378,793 @@ void TestLMCompose2(){
 }
 
 void TestInvLMap1(){
-  contNI2 g1;
-  contNI2::iterator itg1 = g1.begin();
-  
-  itg1 = g1.insert(itg1, 5);
-  ++itg1;
-  itg1 = g1.insert(itg1, 10);
-  ++itg1;
-  itg1 = g1.insert(itg1, 3);
+  LMap lm1;
 
-  contNI2 o1;
-  contNI2::iterator ito1 = o1.begin();
+  lm1.addGO(5, 1);
+  lm1.addGO(10, 2);
+  lm1.addGO(3, 3);
 
-  ito1 = o1.insert(ito1, 1);
-  ++ito1;
-  ito1 = o1.insert(ito1, 2);
-  ++ito1;
-  ito1 = o1.insert(ito1, 3);
-
-  LMap lm1(g1, o1);
   LMap res1 = lm1.invLMap();
-  
-  contNI2 g2;
-  contNI2::iterator itg2 = g2.begin();
+
+  LMap res2; 
 
   float v1 = 1.0 / 5.0;
   float v2 = 1.0 / 10.0;
   float v3 = 1.0 / 3.0; 
+
+  res2.addGO(v1, -v1);
+  res2.addGO(v2, -v1);
+  res2.addGO(v3, -1); 
+
+  BOOST_CHECK(res1 == res2);
+}
+
+// -- Piece wise atomic linear maps ------------------------------------------//
+
+void TestPWAtomCreation1(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 10);
+  Interval i3(1, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+
+  lm1.addGO(1, 1);
+  lm1.addGO(1, 1);
+
+  PWAtomLMap pwatom1(as1, lm1);
+
+  BOOST_CHECK(pwatom1.empty());
+}
+
+void TestPWAtomCreation2(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
  
-  itg2 = g2.insert(itg2, v1);
-  ++itg2;
-  itg2 = g2.insert(itg2, v2);
-  ++itg2;
-  g2.insert(itg2, v3);
+  AtomSet as1(mi1);
 
-  contNI2 o2;
-  contNI2::iterator ito2 = o2.begin();
+  LMap lm1;
+  lm1.addGO(0.5, 0);
+  lm1.addGO(0.5, 0);
 
-  ito2 = o2.insert(ito2, -v1);
-  ++ito2;
-  ito2 = o2.insert(ito2, -v1);
-  ++ito2;
-  o2.insert(ito2, -1);
+  PWAtomLMap pwatom1(as1, lm1);
 
-  LMap res2(g2, o2);
+  BOOST_CHECK(pwatom1.empty());
+}
 
+void TestPWAtomCreation3(){
+  Interval i1(2, 2, 10);
+  Interval i2(2, 2, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+ 
+  AtomSet as1(mi1);
+
+  LMap lm1;
+  lm1.addGO(0.5, 0);
+  lm1.addGO(0.5, 0);
+
+  PWAtomLMap pwatom1(as1, lm1);
+
+  BOOST_CHECK(!pwatom1.empty());
+}
+
+void TestPWAtomImage1(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 10);
+  Interval i3(1, 1, 10);
+
+  MultiInterval mi1; 
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+
+  lm1.addGO(2, 0);
+  lm1.addGO(3, 0);
+  lm1.addGO(1, 0);
+
+  PWAtomLMap pwatom1(as1, lm1);
+
+  AtomSet res1 = pwatom1.image(as1);
+
+  Interval i4(2, 2, 20);
+  Interval i5(3, 3, 30);
+  Interval i6(1, 1, 10);
+
+  MultiInterval mi2;
+  mi2.addInter(i4);
+  mi2.addInter(i5);
+  mi2.addInter(i6);
+ 
+  AtomSet res2(mi2);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWAtomImage2(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 10);
+  Interval i3(1, 1, 10);
+
+  MultiInterval mi1; 
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+
+  lm1.addGO(2, 0);
+  lm1.addGO(3, 0);
+  lm1.addGO(1, 0);
+
+  PWAtomLMap pwatom1(as1, lm1);
+
+  Interval i4(20, 5, 30);
+  Interval i5(5, 1, 10);
+  Interval i6(5, 1, 10);
+
+  MultiInterval mi2;
+  mi2.addInter(i4);
+  mi2.addInter(i5);
+  mi2.addInter(i6);
+
+  AtomSet as2(mi2);
+
+  AtomSet res1 = pwatom1.image(as2);
+ 
+  AtomSet res2;
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWAtomImage3(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 10);
+  Interval i3(1, 1, 10);
+
+  MultiInterval mi1; 
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+
+  lm1.addGO(2, 0);
+  lm1.addGO(3, 0);
+  lm1.addGO(1, 0);
+
+  PWAtomLMap pwatom1(as1, lm1);
+
+  Interval i4(1, 5, 30);
+  Interval i5(5, 1, 10);
+  Interval i6(5, 1, 10);
+
+  MultiInterval mi2;
+  mi2.addInter(i4);
+  mi2.addInter(i5);
+  mi2.addInter(i6);
+
+  AtomSet as2(mi2);
+
+  AtomSet res1 = pwatom1.image(as2);
+ 
+  Interval i7(2, 10, 12);
+  Interval i8(15, 3, 30);
+  Interval i9(5, 1, 10);
+
+  MultiInterval mi3;
+  mi3.addInter(i7);
+  mi3.addInter(i8);
+  mi3.addInter(i9);  
+
+  AtomSet res2(mi3);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWAtomImage4(){
+  Interval i1(1, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+  lm1.addGO(0, 1);
+  lm1.addGO(0, 1);
+
+  PWAtomLMap pwatom1(as1, lm1);
+
+  AtomSet res1 = pwatom1.image(as1);  
+
+  Interval i2(1, 0, 1);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+
+  AtomSet res2(mi2);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWAtomPre1(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 10);
+  Interval i3(1, 1, 10);
+
+  MultiInterval mi1; 
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+
+  lm1.addGO(2, 0);
+  lm1.addGO(3, 0);
+  lm1.addGO(1, 0);
+
+  PWAtomLMap pwatom1(as1, lm1);
+
+  Interval i4(2, 2, 20);
+  Interval i5(3, 3, 30);
+  Interval i6(1, 1, 10);
+
+  MultiInterval mi2;
+  mi2.addInter(i4);
+  mi2.addInter(i5);
+  mi2.addInter(i6);
+
+  AtomSet as2(mi2);
+
+  AtomSet res1 = pwatom1.preImage(as2);
+
+  Interval i7(1, 1, 10);
+  Interval i8(1, 1, 10);
+  Interval i9(1, 1, 10);
+
+  MultiInterval mi3;
+  mi3.addInter(i7);
+  mi3.addInter(i8);
+  mi3.addInter(i8);
+ 
+  AtomSet res2(mi3);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWAtomPre2(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 10);
+  Interval i3(1, 1, 10);
+
+  MultiInterval mi1; 
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+
+  lm1.addGO(2, 0);
+  lm1.addGO(3, 0);
+  lm1.addGO(1, 0);
+
+  PWAtomLMap pwatom1(as1, lm1);
+
+  Interval i4(1, 1, 10);
+  Interval i5(1, 1, 10);
+  Interval i6(1, 1, 10);
+
+  MultiInterval mi2;
+  mi2.addInter(i4);
+  mi2.addInter(i5);
+  mi2.addInter(i6);
+
+  AtomSet as2(mi2);
+
+  AtomSet res1 = pwatom1.preImage(as2);
+
+  Interval i7(1, 1, 5);
+  Interval i8(1, 1, 3);
+  Interval i9(1, 1, 10);
+
+  MultiInterval mi3;
+  mi3.addInter(i7);
+  mi3.addInter(i8);
+  mi3.addInter(i9);
+ 
+  AtomSet res2(mi3);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWAtomPre3(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 10);
+  Interval i3(1, 1, 10);
+
+  MultiInterval mi1; 
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+
+  lm1.addGO(2, 0);
+  lm1.addGO(3, 0);
+  lm1.addGO(1, 0);
+
+  PWAtomLMap pwatom1(as1, lm1);
+
+  Interval i4(100, 1, 1000);
+  Interval i5(1, 1, 10);
+  Interval i6(1, 1, 10);
+
+  MultiInterval mi2;
+  mi2.addInter(i4);
+  mi2.addInter(i5);
+  mi2.addInter(i6);
+
+  AtomSet as2(mi2);
+
+  AtomSet res1 = pwatom1.preImage(as2);
+ 
+  AtomSet res2;
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWAtomPre4(){
+  Interval i1(1, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+  lm1.addGO(0, 3);
+  lm1.addGO(0, 3);
+
+  PWAtomLMap pwatom1(as1, lm1);  
+
+  Interval i2(1, 1, 5);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  AtomSet res1 = pwatom1.preImage(as2);
+
+  AtomSet res2 = as1;
+
+  BOOST_CHECK(res1 == res2);
+}
+
+// -- Piece wise linear maps -------------------------------------------------//
+
+void TestPWLMapCreation1(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+
+  AtomSet as1(mi1);
+
+  Interval i3(20, 3, 30);
+  Interval i4(20, 3, 30);
+
+  MultiInterval mi2;
+  mi2.addInter(i3);
+  mi2.addInter(i4);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+
+  Interval i5(15, 3, 18);
+  Interval i6(15, 3, 18);
+
+  MultiInterval mi3;
+  mi3.addInter(i5);
+  mi3.addInter(i6);
+
+  AtomSet as3(mi3);
+
+  Set s2;
+  s2.addAtomSet(as3);
+
+  LMap lm2;
+  lm2.addGO(1, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1); 
+  pw1.addSetLM(s2, lm2);
+  
+  BOOST_CHECK(pw1.empty());
+}
+
+void TestPWLMapImage1(){
+  Interval i1(1, 1, 5);
+  Interval i2(1, 1, 5);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+
+  AtomSet as1(mi1);
+
+  Interval i3(10, 1, 15);
+  Interval i4(10, 1, 15);
+
+  MultiInterval mi2;
+  mi2.addInter(i3);
+  mi2.addInter(i4);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  Interval i5(20, 3, 30);
+  Interval i6(20, 3, 30);
+
+  MultiInterval mi3;
+  mi3.addInter(i5);
+  mi3.addInter(i6);
+
+  AtomSet as3(mi3);
+
+  Interval i7(45, 5, 50);
+  Interval i8(45, 5, 50);
+
+  MultiInterval mi4;
+  mi4.addInter(i7);
+  mi4.addInter(i8);
+
+  AtomSet as4(mi4);
+
+  Set s2;
+  s2.addAtomSet(as3);
+  s2.addAtomSet(as4);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+
+  LMap lm2;
+  lm2.addGO(2, 0);
+  lm2.addGO(2, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  Set aux = s1.cup(s2);
+  Set res1 = pw1.image(aux);
+
+  Interval i9(40, 6, 60);
+  Interval i10(40, 6, 60);
+
+  MultiInterval mi5;
+  mi5.addInter(i9);
+  mi5.addInter(i10);
+
+  AtomSet as5(mi5);
+
+  Interval i11(90, 10, 100);
+  Interval i12(90, 10, 100);
+
+  MultiInterval mi6;
+  mi6.addInter(i11);
+  mi6.addInter(i12);
+
+  AtomSet as6(mi6);
+
+  Set s3;
+  s3.addAtomSet(as5);
+  s3.addAtomSet(as6);
+
+  Set res2 = s1.cup(s3);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWLMapImage2(){
+  Interval i1(1, 1, 5);
+  Interval i2(1, 1, 5);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+
+  AtomSet as1(mi1);
+
+  Interval i3(10, 1, 15);
+  Interval i4(10, 1, 15);
+
+  MultiInterval mi2;
+  mi2.addInter(i3);
+  mi2.addInter(i4);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  Interval i5(20, 3, 30);
+  Interval i6(20, 3, 30);
+
+  MultiInterval mi3;
+  mi3.addInter(i5);
+  mi3.addInter(i6);
+
+  AtomSet as3(mi3);
+
+  Interval i7(45, 5, 50);
+  Interval i8(45, 5, 50);
+
+  MultiInterval mi4;
+  mi4.addInter(i7);
+  mi4.addInter(i8);
+
+  AtomSet as4(mi4);
+
+  Set s2;
+  s2.addAtomSet(as3);
+  s2.addAtomSet(as4);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+
+  LMap lm2;
+  lm2.addGO(2, 0);
+  lm2.addGO(2, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  Set res1 = pw1.image(s1);
+
+  Set res2 = s1;
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWLMapPre1(){
+  Interval i1(1, 1, 10);
+  
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(20, 5, 30);
+  
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  Interval i3(11, 1, 14);
+
+  MultiInterval mi3;
+  mi3.addInter(i3);
+  mi3.addInter(i3);
+
+  AtomSet as3(mi3);
+
+  Interval i4(1, 1, 10);
+  Interval i5(50, 5, 70);
+
+  MultiInterval mi4;
+  mi4.addInter(i4);
+  mi4.addInter(i5);
+
+  AtomSet as4(mi4);
+
+  Set s2;
+  s2.addAtomSet(as3);
+  s2.addAtomSet(as4);
+
+  LMap lm1; 
+  lm1.addGO(0, 3);
+  lm1.addGO(0, 4);
+
+  LMap lm2;
+  lm2.addGO(2, 0);
+  lm2.addGO(2, 1);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  Interval i6(0, 1, 25);
+
+  MultiInterval mi5;
+  mi5.addInter(i6);
+  mi5.addInter(i6);
+
+  AtomSet as5(mi5);
+
+  Set s3;
+  s3.addAtomSet(as5);
+
+  Set res1 = pw1.preImage(s3);
+
+  Interval i7(11, 1, 12);
+
+  MultiInterval mi6;
+  mi6.addInter(i7);
+  mi6.addInter(i7);
+
+  AtomSet as6(mi6);
+
+  Set res2;
+  res2.addAtomSet(as1);
+  res2.addAtomSet(as2);
+  res2.addAtomSet(as6);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestPWLMapComp1(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 1, 5);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+
+  AtomSet as1(mi1);
+
+  Interval i3(20, 2, 30);
+
+  MultiInterval mi2;
+  mi2.addInter(i3);
+  mi2.addInter(i3);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+  
+  Interval i4(15, 3, 18);
+  Interval i5(12, 3, 20);
+
+  MultiInterval mi3;
+  mi3.addInter(i4);
+  mi3.addInter(i5);
+
+  AtomSet as3(mi3);
+ 
+  Set s2;
+  s2.addAtomSet(as3);
+
+  LMap lm1;
+  lm1.addGO(2, 1);
+  lm1.addGO(3, 0);
+
+  LMap lm2;
+  lm2.addGO(0, 0);
+  lm2.addGO(0, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  Interval i6(1, 1, 30);
+
+  MultiInterval mi4;
+  mi4.addInter(i6);
+  mi4.addInter(i6);
+
+  AtomSet as4(mi4);
+
+  Set s4;
+  s4.addAtomSet(as4);
+
+  LMap lm3;
+  lm3.addGO(1, 1);
+  lm3.addGO(1, 2);
+
+  PWLMap pw2;
+  pw2.addSetLM(s4, lm3);
+
+  PWLMap res1 = pw1.compPW(pw2);
+
+  Interval i7(1, 1, 9);
+  Interval i8(1, 1, 3);
+
+  MultiInterval mi5;
+  mi5.addInter(i7);
+  mi5.addInter(i8);
+
+  AtomSet as5(mi5);
+
+  Interval i9(19, 2, 29);
+  Interval i10(18, 2, 28);
+
+  MultiInterval mi6;
+  mi6.addInter(i9);
+  mi6.addInter(i10);
+
+  AtomSet as6(mi6);
+
+  Set s5;
+  s5.addAtomSet(as5);
+  s5.addAtomSet(as6);
+
+  Interval i11(14, 3, 17);
+  Interval i12(10, 3, 16);
+
+  MultiInterval mi7;
+  mi7.addInter(i11);
+  mi7.addInter(i12);
+
+  AtomSet as7(mi7);
+
+  Set s6;
+  s6.addAtomSet(as7);
+
+  LMap lm4;
+  lm4.addGO(2, 3);
+  lm4.addGO(3, 6);
+
+  PWLMap res2;
+  res2.addSetLM(s5, lm4);
+  res2.addSetLM(s6, lm2);
+ 
   BOOST_CHECK(res1 == res2);
 }
 
@@ -1421,11 +2182,11 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntQuery3));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntQuery4));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntQuery5));
-  framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntQuery6));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntCap1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntCap2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntCap3));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntCap4));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntCap5));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntDiff1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntDiff2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntDiff3));
@@ -1433,6 +2194,7 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntMin1));
 
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiCreation1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiCreation2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiEmpty1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiEmpty2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiEmpty3));
@@ -1444,6 +2206,7 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiCap1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiCap2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiCap3));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiCap4));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiDiff1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiDiff2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiDiff3));
@@ -1457,6 +2220,7 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestASetEmpty2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestASetEmpty3));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestASetCap1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestASetCap2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestASetDiff1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestASetMin1));
 
@@ -1467,14 +2231,34 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetCap1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetCap2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetCap3));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetCap4));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetDiff1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetMin1));
-
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestSetMin2));
 
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestLMCreation1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestLMCompose1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestLMCompose2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestInvLMap1));
+
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomCreation1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomCreation2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomCreation3));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomImage1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomImage2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomImage3));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomImage4));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomPre1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomPre2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomPre3));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWAtomPre4));
+
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapCreation1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapImage1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapImage2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapPre1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapComp1));
+
   return 0;
 }
 
