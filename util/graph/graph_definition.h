@@ -37,6 +37,7 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <math.h>
 #include <utility>
 
 #include <boost/config.hpp>
@@ -551,6 +552,25 @@ struct MultiInterImp1{
     return res;
   }
 
+  MultiInterImp1 replace(IntervalImp &i, int dim){
+    CT1<IntervalImp> auxRes;
+    IntImpIt itAux = auxRes.begin();
+    int count = 1;
+
+    BOOST_FOREACH(IntervalImp ii, inters){
+      if(dim == count)
+        itAux = auxRes.insert(itAux, i);
+      else
+        itAux = auxRes.insert(itAux, ii);
+
+      ++itAux;
+
+      ++count;
+    }
+
+    return MultiInterImp1(auxRes);
+  }
+
   bool operator==(const MultiInterImp1 &other) const{
     return inters == other.inters;
   }
@@ -635,6 +655,10 @@ struct MultiInterAbs{
     return multiInterImp.minElem();
   }
 
+  MultiInterAbs replace(IntervalImp &i, int dim){
+    return MultiInterAbs(multiInterImp.replace(i, dim));
+  }
+
   bool operator==(const MultiInterAbs &other) const{
     return multiInterImp == other.multiInterImp;
   }
@@ -667,7 +691,7 @@ template<template<typename T, typename = allocator<T>> class CT1,
          template<typename Value, typename Hash = boost::hash<Value>, 
                   typename Pred = std::equal_to<Value>, 
                   typename Alloc = std::allocator<Value>> class CT2,
-         typename MultiInterImp, typename NumImp>
+         typename MultiInterImp, typename IntervalImp, typename NumImp>
 struct AtomSetImp1{
   MultiInterImp aset;
   int ndim;
@@ -732,6 +756,10 @@ struct AtomSetImp1{
     return aset.minElem();
   }
 
+  AtomSetImp1 replace(IntervalImp &i, int dim){
+    return AtomSetImp1(aset.replace(i, dim));
+  }
+
   bool operator==(const AtomSetImp1 &other) const{
     return aset == other.aset;
   }
@@ -749,8 +777,8 @@ template<template<typename T, typename = allocator<T>> class CT1,
          template<typename Value, typename Hash = boost::hash<Value>, 
                   typename Pred = std::equal_to<Value>, 
                   typename Alloc = std::allocator<Value>> class CT2,
-         typename MultiInterImp, typename NumImp>
-size_t hash_value(AtomSetImp1<CT1, CT2, MultiInterImp, NumImp> as){
+         typename MultiInterImp, typename IntervalImp, typename NumImp>
+size_t hash_value(AtomSetImp1<CT1, CT2, MultiInterImp, IntervalImp, NumImp> as){
   return as.hash();
 }
 
@@ -758,7 +786,7 @@ template<template<typename T, typename = allocator<T>> class CT1,
          template<typename Value, typename Hash = boost::hash<Value>, 
                   typename Pred = std::equal_to<Value>, 
                   typename Alloc = std::allocator<Value>> class CT2,
-          typename ASetImp, typename MultiInterImp, typename NumImp>
+          typename ASetImp, typename MultiInterImp, typename IntervalImp, typename NumImp>
 struct AtomSetAbs{
   AtomSetAbs(){
     ASetImp aux;
@@ -815,6 +843,10 @@ struct AtomSetAbs{
     return as.minElem();
   }
 
+  AtomSetAbs replace(IntervalImp &i, int dim){
+    return AtomSetAbs(as.replace(i, dim));
+  }
+
   bool operator==(const AtomSetAbs &other) const{
     return as == other.as;
   }
@@ -836,8 +868,8 @@ template<template<typename T, typename = allocator<T>> class CT1,
          template<typename Value, typename Hash = boost::hash<Value>, 
                   typename Pred = std::equal_to<Value>, 
                   typename Alloc = std::allocator<Value>> class CT2,
-         typename ASetImp, typename MultiInterImp, typename NumImp>
-size_t hash_value(AtomSetAbs<CT1, CT2, ASetImp, MultiInterImp, NumImp> as){
+         typename ASetImp, typename MultiInterImp, typename IntervalImp, typename NumImp>
+size_t hash_value(AtomSetAbs<CT1, CT2, ASetImp, MultiInterImp, IntervalImp, NumImp> as){
   return as.hash();
 }
 
@@ -1409,6 +1441,7 @@ struct PWAtomLMapImp1{
       CT<IntervalImp> auxdom;
       typename CT<IntervalImp>::iterator itd = auxdom.begin();
 
+      // TODO: ganancia negativa?
       BOOST_FOREACH(IntervalImp i, ints){
         NumImp2 auxLo = i.lo_() * (*itg) + (*ito); 
         NumImp2 auxStep = i.step_() * (*itg);
@@ -1558,6 +1591,11 @@ struct PWAtomLMapAbs{
     return pw.preImage(s);
   }
 
+  PWAtomLMapAbs minAtomPW(PWAtomLMapAbs &pw2){
+    PWAtomLMapImp aux = pw.minAtomPW(pw2.pw);
+    return PWAtomLMapAbs(aux);
+  }
+
   bool operator==(const PWAtomLMapAbs &other){
     return pw == other.pw;
   }
@@ -1572,7 +1610,8 @@ template<template<typename T, class = allocator<T>> class CT1,
          template<typename Value, typename Hash = boost::hash<Value>, 
                   typename Pred = std::equal_to<Value>, 
                   typename Alloc = std::allocator<Value>> class CT2,
-         typename PWAtomLMapImp, typename LMapImp, typename SetImp, typename ASetImp>
+         typename PWAtomLMapImp, typename LMapImp, typename SetImp, typename ASetImp, 
+         typename NumImp1, typename NumImp2>
 struct PWLMapImp1{
   typedef CT1<SetImp> CTSet;
   typedef typename CT1<SetImp>::iterator CTSetIt;
@@ -1744,6 +1783,59 @@ struct PWLMapImp1{
 
     return PWLMapImp1(ress, reslm);
   }
+ 
+  PWLMapImp1 minInvCompact(){
+    // Only one component
+    if(dom.size() == 1){
+      SetImp auxDom = (*(dom.begin()));
+      SetImp domInv = image(auxDom);
+      LMapImp auxMap = (*(lmap.begin()));
+      LMapImp mapInv = auxMap.invLMap();
+      CT1<NumImp1> min = auxDom.minElem();
+      typename CT1<NumImp1>::iterator itmin = min.begin();
+
+      CT1<NumImp2> resg;
+      typename CT1<NumImp2>::iterator itresg = resg.begin();
+      CT1<NumImp2> reso;
+      typename CT1<NumImp2>::iterator itreso = reso.begin();
+
+      CT1<NumImp2> g = mapInv.gain_();
+      CT1<NumImp2> o = mapInv.off_(); 
+      typename CT1<NumImp2>::iterator ito = o.begin();
+      BOOST_FOREACH(NumImp2 gi, g){
+        if(gi == Inf){
+          itresg = resg.insert(itresg, 0);
+          ++itresg;
+          itreso = reso.insert(itreso, *itmin);
+          ++itreso;
+        }
+
+        else{
+          itresg = resg.insert(itresg, gi);
+          ++itresg;
+          itreso = reso.insert(itreso, *ito);
+          ++itreso;
+        }
+
+        ++ito;
+        ++itmin;
+      }
+
+      CT1<SetImp> auxDomRes;
+      auxDomRes.insert(auxDomRes.begin(), domInv);
+      LMapImp auxLM(resg, reso);
+      CT1<LMapImp> auxLMRes;
+      auxLMRes.insert(auxLMRes.begin(), auxLM);
+      return PWLMapImp1(auxDomRes, auxLMRes); 
+    }
+
+    else{
+      WARNING("There should be only one component");
+
+      PWLMapImp1 aux;
+      return aux;
+    }
+  }
 
   bool operator==(const PWLMapImp1 &other) const{
     return dom == other.dom && lmap == other.lmap;
@@ -1796,6 +1888,11 @@ struct PWLMapAbs{
     return PWLMapAbs(aux);
   }
 
+  PWLMapAbs minInvCompact(){
+    PWLMapImp aux = pw.minInvCompact();
+    return PWLMapAbs(aux);
+  }
+
   bool operator==(const PWLMapAbs &other) const{
     return pw == other.pw;
   }
@@ -1803,6 +1900,112 @@ struct PWLMapAbs{
   private:
   PWLMapImp pw;
 };
+
+template<template<typename T, class = allocator<T>> class CT,
+         typename PWLMapImp, typename LMapImp, typename SetImp,
+         typename ASetImp, typename IntervalImp, typename NumImp2>
+PWLMapImp minAtomPW(ASetImp dom, LMapImp lm1, LMapImp lm2){
+  CT<NumImp2> g1 = lm1.gain_();
+  typename CT<NumImp2>::iterator itg1 = g1.begin();
+  CT<NumImp2> o1 = lm1.off_();
+  typename CT<NumImp2>::iterator ito1 = o1.begin();
+  CT<NumImp2> g2 = lm2.gain_();
+  typename CT<NumImp2>::iterator itg2 = g2.begin();
+  CT<NumImp2> o2 = lm2.off_();
+  typename CT<NumImp2>::iterator ito2 = o2.begin();
+  CT<IntervalImp> ints = dom.aset_().inters_();     
+  typename CT<IntervalImp>::iterator itints = ints.begin();
+
+  ASetImp asAux = dom;
+  LMapImp lmAux = lm1;
+  CT<NumImp2> resg = g1;
+  typename CT<NumImp2>::iterator itresg = resg.begin();
+  CT<NumImp2> reso = o1;
+  typename CT<NumImp2>::iterator itreso = reso.begin();
+  int count = 1;
+
+  CT<SetImp> domRes;
+  CT<LMapImp> lmRes; 
+
+  if(lm1.ndim_() == lm2.ndim_()){
+    BOOST_FOREACH(NumImp2 g1i, g1){
+      if(g1i != *itg2){
+        NumImp2 xinter = (*ito2 - *ito1) / (g1i - *itg2);
+
+        // Intersection before domain
+        if(xinter <= (*itints).lo_()){
+          if(*itg2 < g1i)
+            lmAux = lm2;
+
+          SetImp sAux;
+          sAux.addAtomSet(asAux);
+
+          domRes.insert(domRes.begin(), sAux);
+          lmRes.insert(lmRes.begin(), lmAux);
+        }
+
+        // Intersection after domain
+        else if(xinter >= (*itints).hi_()){
+          if(*itg2 > g1i)
+            lmAux = lm2;
+
+          SetImp sAux;
+          sAux.addAtomSet(asAux);
+
+          domRes.insert(domRes.begin(), sAux);
+          lmRes.insert(lmRes.begin(), lmAux);
+        }
+
+        // Intersection in domain
+        else{
+          IntervalImp i1((*itints).lo_(), (*itints).step_(), floor(xinter));
+          IntervalImp i2(i1.hi_() + i1.step_(), (*itints).step_(), (*itints).hi_());
+
+          ASetImp as1 = asAux.replace(i1, count);
+          ASetImp as2 = asAux.replace(i2, count); 
+
+          SetImp d1;
+          d1.addAtomSet(as1);
+
+          SetImp d2;
+          d2.addAtomSet(as2);
+
+          domRes.insert(domRes.end(), d1);
+          domRes.insert(domRes.end(), d2);
+
+          if(g1i > *itg2){
+            lmRes.insert(lmRes.end(), lm1);
+            lmRes.insert(lmRes.end(), lm2);
+          }
+       
+          else{
+            lmRes.insert(lmRes.end(), lm2);
+            lmRes.insert(lmRes.end(), lm1); 
+          }
+        }
+
+        PWLMapImp auxRes(domRes, lmRes);
+        return auxRes;
+      }
+ 
+      else if(*ito1 != *ito2){
+        if(*ito2 < *ito1){
+          LMapImp auxLM(g2, o2);
+       
+        }
+      }
+
+      ++ito1;
+      ++itg2;
+      ++ito2;
+      ++itints;
+      ++count;
+    }
+  }
+
+  PWLMapImp auxRes;
+  return auxRes;
+}
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -1857,8 +2060,8 @@ ostream &operator<<(ostream &out, MultiInterval &mi){
   return out;
 }
 
-typedef AtomSetImp1<OrdCT, UnordCT, MultiInterval, NI1> AtomSetImp;
-typedef AtomSetAbs<OrdCT, UnordCT, AtomSetImp, MultiInterval, NI1> AtomSet;
+typedef AtomSetImp1<OrdCT, UnordCT, MultiInterval, Interval, NI1> AtomSetImp;
+typedef AtomSetAbs<OrdCT, UnordCT, AtomSetImp, MultiInterval, Interval, NI1> AtomSet;
 
 ostream &operator<<(ostream &out, AtomSet &as){
   MultiInterval mi = as.aset_();
@@ -1965,7 +2168,7 @@ ostream &operator<<(ostream &out, PWAtomLMap &pwatom){
   return out; 
 }
 
-typedef PWLMapImp1<OrdCT, UnordCT, PWAtomLMap, LMap, Set, AtomSet> PWLMapImp;
+typedef PWLMapImp1<OrdCT, UnordCT, PWAtomLMap, LMap, Set, AtomSet, NI1, NI2> PWLMapImp;
 typedef PWLMapAbs<OrdCT, PWLMapImp, LMap, Set> PWLMap;
 
 ostream &auxSetLMap(ostream &out, Set &s, LMap &lm){
@@ -2036,6 +2239,9 @@ ostream &operator<<(ostream &out, PWLMap &pw){
 
   return out;
 }
+
+template PWLMap minAtomPW<list, PWLMap, LMap, Set, AtomSet, Interval, NI2>
+  (AtomSet, LMap, LMap);
 
 // ------ Graph definition ------ //
 
