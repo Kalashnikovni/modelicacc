@@ -2272,14 +2272,14 @@ void TestMinAtomPW1(){
   LMap lm1;
   lm1.addGO(1.0, 60.0);
   lm1.addGO(2.0, 2.0);
-  lm1.addGO(-1.0, 60.0);
+  lm1.addGO(0.0, 35.0);
 
   LMap lm2; 
   lm2.addGO(1.0, 60.0);
   lm2.addGO(2.0, 2.0);
   lm2.addGO(1.0, 10.0);
 
-  PWLMap res1 = minAtomPW<list, PWLMap, LMap, Set, AtomSet, Interval, NI2>(as1, lm1, lm2);
+  PWLMap res1 = minAtomPW(as1, lm1, lm2);
 
   Interval i4(3, 3, 24);
 
@@ -2308,6 +2308,145 @@ void TestMinAtomPW1(){
   PWLMap res2;
   res2.addSetLM(s1, lm2);
   res2.addSetLM(s2, lm1);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+//TODO
+void TestMinAtomPW2(){
+  Interval i1(2, 2, 20);
+  Interval i2(1, 1, 10);
+  Interval i3(3, 3, 50);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  AtomSet as1(mi1);
+
+  LMap lm1;
+  lm1.addGO(1.0, 60.0);
+  lm1.addGO(2.0, 5.0);
+  lm1.addGO(1.0, 60.0);
+
+  LMap lm2; 
+  lm2.addGO(1.0, 60.0);
+  lm2.addGO(2.0, 3.0);
+  lm2.addGO(1.0, 10.0);
+
+  PWLMap res1 = minAtomPW(as1, lm1, lm2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+
+  PWLMap res2;
+  res2.addSetLM(s1, lm2);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMinPW1(){
+  Interval i1(1, 1, 5);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(10, 1, 15);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  Interval i3(20, 2, 30);
+  
+  MultiInterval mi3;
+  mi3.addInter(i3);
+
+  AtomSet as3(mi3); 
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+  s1.addAtomSet(as3);
+
+  LMap lm1;
+  lm1.addGO(0, 12);
+
+  LMap lm2;
+  lm2.addGO(2, -12);
+
+  PWLMap res1 = minPW(s1, lm1, lm2);
+ 
+  Interval i4(10, 1, 12);
+
+  MultiInterval mi4;
+  mi4.addInter(i4);
+
+  AtomSet as4(mi4);
+
+  Set s2;
+  s2.addAtomSet(as1);
+  s2.addAtomSet(as4);
+
+  Interval i5(13, 1, 15);
+
+  MultiInterval mi5;
+  mi5.addInter(i5);
+
+  AtomSet as5(mi5);
+
+  Set s3;
+  s3.addAtomSet(as3);
+  s3.addAtomSet(as5);
+
+  PWLMap res2;
+  res2.addSetLM(s2, lm2);
+  res2.addSetLM(s3, lm1);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMinPW2(){
+  Interval i1(2, 1, 5);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(10, 1, 15);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  Interval i3(20, 2, 30);
+  
+  MultiInterval mi3;
+  mi3.addInter(i3);
+
+  AtomSet as3(mi3); 
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+  s1.addAtomSet(as3);
+
+  LMap lm1;
+  lm1.addGO(0, 1);
+
+  LMap lm2;
+  lm2.addGO(1, 0);
+
+  PWLMap res1 = minPW(s1, lm1, lm2);
+
+  PWLMap res2;
+  res2.addSetLM(s1, lm1);
 
   BOOST_CHECK(res1 == res2);
 }
@@ -2406,6 +2545,9 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapMinInvComp1));
 
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAtomPW1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAtomPW2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinPW1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinPW2));
 
   return 0;
 }

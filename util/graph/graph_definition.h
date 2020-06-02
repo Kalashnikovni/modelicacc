@@ -1223,21 +1223,40 @@ struct LMapImp1{
     ndim = 0;
   }
   LMapImp1(CTNum g, CTNum o){
-    if(g.size() == o.size()){
-      gain = g;
-      offset = o;
-      ndim = g.size();
+    bool negative = false;
+
+    BOOST_FOREACH(NumImp gi, g){
+      if(gi < 0)
+        negative = true;
+    }
+
+    if(!negative){
+      if(g.size() == o.size()){
+        gain = g;
+        offset = o;
+        ndim = g.size();
+      }
+
+      else{
+        WARNING("Offset and gain should be of the same size");
+
+        CTNum aux1;
+        CTNum aux2;
+        gain = aux2;
+        offset = aux1;
+        ndim = 0;
+      }
     }
 
     else{
-      WARNING("Offset and gain should be of the same size");
+      WARNING("All gains should be positive");
 
       CTNum aux1;
       CTNum aux2;
       gain = aux2;
       offset = aux1;
       ndim = 0;
-    }  
+    }
   }
   // Constructs the id of LMaps
   LMapImp1(int dim){
@@ -1278,9 +1297,14 @@ struct LMapImp1{
   }
 
   void addGO(NumImp g, NumImp o){
-    gain.insert(gain.end(), g);
-    offset.insert(offset.end(), o);
-    ++ndim;
+    if(g >= 0){
+      gain.insert(gain.end(), g);
+      offset.insert(offset.end(), o);
+      ++ndim;
+    }
+
+    else
+      WARNING("Gain should be positive");
   }
 
   LMapImp1 compose(LMapImp1 &lm2){
@@ -1436,12 +1460,11 @@ struct PWAtomLMapImp1{
       typename CT<NumImp2>::iterator itg = g.begin();
       CT<NumImp2> o = l.off_();
       typename CT<NumImp2>::iterator ito = o.begin();
-      bool uncompatible = false;
+      bool incompatible = false;
 
       CT<IntervalImp> auxdom;
       typename CT<IntervalImp>::iterator itd = auxdom.begin();
 
-      // TODO: ganancia negativa?
       BOOST_FOREACH(IntervalImp i, ints){
         NumImp2 auxLo = i.lo_() * (*itg) + (*ito); 
         NumImp2 auxStep = i.step_() * (*itg);
@@ -1450,17 +1473,17 @@ struct PWAtomLMapImp1{
         if(*itg < Inf){
           if(auxLo != (int) auxLo && i.lo_()){
             WARNING("Incompatible map");
-            uncompatible = true;
+            incompatible = true;
           }
 
           if(auxStep != (int) auxStep && i.step_()){
             WARNING("Incompatible map");
-            uncompatible = true;
+            incompatible = true;
           }
 
           if(auxHi != (int) auxHi && i.hi_()){
             WARNING("Incompatible map");
-            uncompatible = true;
+            incompatible = true;
           }
 
           ++itg;
@@ -1468,7 +1491,7 @@ struct PWAtomLMapImp1{
         }
       }
 
-      if(uncompatible){
+      if(incompatible){
         dom = aux1;
         lmap = aux2;
       }
@@ -1512,21 +1535,25 @@ struct PWAtomLMapImp1{
       NumImp1 newStep;
       NumImp1 newHi;
 
+      NumImp2 auxLo = capi.lo_() * (*itg) + (*ito);
+      NumImp2 auxStep = capi.step_() * (*itg);
+      NumImp2 auxHi = capi.hi_() * (*itg) + (*ito);
+
       if(*itg < Inf){
-        if(capi.lo_() == Inf)
+        if(auxLo >= Inf)
           newLo = Inf;
         else 
-          newLo = capi.lo_() * (*itg) + (*ito);
+          newLo = (NumImp1) auxLo;
 
-        if(capi.step_() == Inf)
+        if(auxStep >= Inf)
           newStep = Inf;
         else
-          newStep = capi.step_() * (*itg);
+          newStep = (NumImp1) auxStep;
 
-        if(capi.hi_() == Inf)
+        if(auxHi >= Inf)
           newHi = Inf;
         else 
-          newHi = capi.hi_() * (*itg) + (*ito);
+          newHi = (NumImp1) auxHi;
       }
 
       else{
@@ -1821,10 +1848,10 @@ struct PWLMapImp1{
         ++itmin;
       }
 
-      CT1<SetImp> auxDomRes;
+      CTSet auxDomRes;
       auxDomRes.insert(auxDomRes.begin(), domInv);
       LMapImp auxLM(resg, reso);
-      CT1<LMapImp> auxLMRes;
+      CTLMap auxLMRes;
       auxLMRes.insert(auxLMRes.begin(), auxLM);
       return PWLMapImp1(auxDomRes, auxLMRes); 
     }
@@ -1835,6 +1862,52 @@ struct PWLMapImp1{
       PWLMapImp1 aux;
       return aux;
     }
+  }
+
+  SetImp wholeDom(){
+    SetImp res; 
+
+    BOOST_FOREACH(SetImp s, dom){
+      res = res.cup(s);
+    }
+
+    return res;
+  }
+
+  PWLMapImp1 combine(PWLMapImp1 &pw2){
+    CTSet sres;
+    CTSetIt its = sres.begin();
+    CTLMap lres;
+    CTLMapIt itl = lres.begin();
+
+    if(empty())
+      return pw2;
+
+    else if(pw2.empty())
+      return *this;
+
+    else{
+      SetImp aux1 = wholeDom(); 
+      CTSet dom2 = pw2.dom_(); 
+      CTLMap lm2 = pw2.lmap_();
+      CTLMapIt itlm2 = lm2.begin();
+
+      BOOST_FOREACH(SetImp s2, dom2){
+        SetImp newDom = s2.diff(aux1);
+        
+        if(!newDom.empty()){
+          its = sres.insert(its, newDom);
+          ++its;
+          itl = lres.insert(itl, *itlm2);
+          ++itl;
+        }
+
+        ++itlm2;
+      }
+    }
+
+    PWLMapImp1 res(sres, lres);
+    return res;
   }
 
   bool operator==(const PWLMapImp1 &other) const{
@@ -1893,6 +1966,15 @@ struct PWLMapAbs{
     return PWLMapAbs(aux);
   }
 
+  SetImp wholeDom(){
+    return pw.wholeDom();
+  }
+
+  PWLMapAbs combine(PWLMapAbs &pw2){
+    PWLMapImp aux = pw.combine(pw2.pw);
+    return PWLMapAbs(aux);
+  }
+
   bool operator==(const PWLMapAbs &other) const{
     return pw == other.pw;
   }
@@ -1900,113 +1982,6 @@ struct PWLMapAbs{
   private:
   PWLMapImp pw;
 };
-
-template<template<typename T, class = allocator<T>> class CT,
-         typename PWLMapImp, typename LMapImp, typename SetImp,
-         typename ASetImp, typename IntervalImp, typename NumImp2>
-PWLMapImp minAtomPW(ASetImp dom, LMapImp lm1, LMapImp lm2){
-  CT<NumImp2> g1 = lm1.gain_();
-  typename CT<NumImp2>::iterator itg1 = g1.begin();
-  CT<NumImp2> o1 = lm1.off_();
-  typename CT<NumImp2>::iterator ito1 = o1.begin();
-  CT<NumImp2> g2 = lm2.gain_();
-  typename CT<NumImp2>::iterator itg2 = g2.begin();
-  CT<NumImp2> o2 = lm2.off_();
-  typename CT<NumImp2>::iterator ito2 = o2.begin();
-  CT<IntervalImp> ints = dom.aset_().inters_();     
-  typename CT<IntervalImp>::iterator itints = ints.begin();
-
-  ASetImp asAux = dom;
-  LMapImp lmAux = lm1;
-  CT<NumImp2> resg = g1;
-  typename CT<NumImp2>::iterator itresg = resg.begin();
-  CT<NumImp2> reso = o1;
-  typename CT<NumImp2>::iterator itreso = reso.begin();
-  int count = 1;
-
-  CT<SetImp> domRes;
-  CT<LMapImp> lmRes; 
-
-  if(lm1.ndim_() == lm2.ndim_()){
-    BOOST_FOREACH(NumImp2 g1i, g1){
-      if(g1i != *itg2){
-        NumImp2 xinter = (*ito2 - *ito1) / (g1i - *itg2);
-
-        // Intersection before domain
-        if(xinter <= (*itints).lo_()){
-          if(*itg2 < g1i)
-            lmAux = lm2;
-
-          SetImp sAux;
-          sAux.addAtomSet(asAux);
-
-          domRes.insert(domRes.begin(), sAux);
-          lmRes.insert(lmRes.begin(), lmAux);
-        }
-
-        // Intersection after domain
-        else if(xinter >= (*itints).hi_()){
-          if(*itg2 > g1i)
-            lmAux = lm2;
-
-          SetImp sAux;
-          sAux.addAtomSet(asAux);
-
-          domRes.insert(domRes.begin(), sAux);
-          lmRes.insert(lmRes.begin(), lmAux);
-        }
-
-        // Intersection in domain
-        else{
-          IntervalImp i1((*itints).lo_(), (*itints).step_(), floor(xinter));
-          IntervalImp i2(i1.hi_() + i1.step_(), (*itints).step_(), (*itints).hi_());
-
-          ASetImp as1 = asAux.replace(i1, count);
-          ASetImp as2 = asAux.replace(i2, count); 
-
-          SetImp d1;
-          d1.addAtomSet(as1);
-
-          SetImp d2;
-          d2.addAtomSet(as2);
-
-          domRes.insert(domRes.end(), d1);
-          domRes.insert(domRes.end(), d2);
-
-          if(g1i > *itg2){
-            lmRes.insert(lmRes.end(), lm1);
-            lmRes.insert(lmRes.end(), lm2);
-          }
-       
-          else{
-            lmRes.insert(lmRes.end(), lm2);
-            lmRes.insert(lmRes.end(), lm1); 
-          }
-        }
-
-        PWLMapImp auxRes(domRes, lmRes);
-        return auxRes;
-      }
- 
-      else if(*ito1 != *ito2){
-        if(*ito2 < *ito1){
-          LMapImp auxLM(g2, o2);
-       
-        }
-      }
-
-      ++ito1;
-      ++itg2;
-      ++ito2;
-      ++itints;
-      ++count;
-    }
-  }
-
-  PWLMapImp auxRes;
-  return auxRes;
-}
-
 
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
@@ -2240,11 +2215,195 @@ ostream &operator<<(ostream &out, PWLMap &pw){
   return out;
 }
 
-template PWLMap minAtomPW<list, PWLMap, LMap, Set, AtomSet, Interval, NI2>
-  (AtomSet, LMap, LMap);
+/*-----------------------------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------------------*/
+// Functions
+/*-----------------------------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------------------*/
 
-// ------ Graph definition ------ //
+PWLMap minAtomPW(AtomSet &dom, LMap &lm1, LMap &lm2){
+  OrdCT<NI2> g1 = lm1.gain_();
+  OrdCT<NI2>::iterator itg1 = g1.begin();
+  OrdCT<NI2> o1 = lm1.off_();
+  OrdCT<NI2>::iterator ito1 = o1.begin();
+  OrdCT<NI2> g2 = lm2.gain_();
+  OrdCT<NI2>::iterator itg2 = g2.begin();
+  OrdCT<NI2> o2 = lm2.off_();
+  OrdCT<NI2>::iterator ito2 = o2.begin();
+  OrdCT<Interval> ints = dom.aset_().inters_();     
+  OrdCT<Interval>::iterator itints = ints.begin();
 
+  AtomSet asAux = dom;
+  LMap lmAux = lm1;
+  OrdCT<NI2> resg = g1;
+  OrdCT<NI2>::iterator itresg = resg.begin();
+  OrdCT<NI2> reso = o1;
+  OrdCT<NI2>::iterator itreso = reso.begin();
+  int count = 1;
+
+  OrdCT<Set> domRes;
+  OrdCT<LMap> lmRes; 
+
+  if(lm1.ndim_() == lm2.ndim_()){
+    BOOST_FOREACH(NI2 g1i, g1){
+      if(g1i != *itg2){
+        NI2 xinter = (*ito2 - *ito1) / (g1i - *itg2);
+
+        // Intersection before domain
+        if(xinter <= (*itints).lo_()){
+          if(*itg2 < g1i)
+            lmAux = lm2;
+
+          Set sAux;
+          sAux.addAtomSet(asAux);
+
+          domRes.insert(domRes.begin(), sAux);
+          lmRes.insert(lmRes.begin(), lmAux);
+        }
+
+        // Intersection after domain
+        else if(xinter >= (*itints).hi_()){
+          if(*itg2 > g1i)
+            lmAux = lm2;
+
+          Set sAux;
+          sAux.addAtomSet(asAux);
+
+          domRes.insert(domRes.begin(), sAux);
+          lmRes.insert(lmRes.begin(), lmAux);
+        }
+
+        // Intersection in domain
+        else{
+          Interval i1((*itints).lo_(), (*itints).step_(), floor(xinter));
+          Interval i2(i1.hi_() + i1.step_(), (*itints).step_(), (*itints).hi_());
+
+          AtomSet as1 = asAux.replace(i1, count);
+          AtomSet as2 = asAux.replace(i2, count); 
+
+          Set d1;
+          d1.addAtomSet(as1);
+
+          Set d2;
+          d2.addAtomSet(as2);
+
+          domRes.insert(domRes.end(), d1);
+          domRes.insert(domRes.end(), d2);
+
+          if(g1i > *itg2){
+            lmRes.insert(lmRes.end(), lm1);
+            lmRes.insert(lmRes.end(), lm2);
+          }
+       
+          else{
+            lmRes.insert(lmRes.end(), lm2);
+            lmRes.insert(lmRes.end(), lm1); 
+          }
+        }
+
+        PWLMap auxRes(domRes, lmRes);
+        return auxRes;
+      }
+ 
+      else if(*ito1 != *ito2){
+        if(*ito2 < *ito1)
+          lmAux = lm2;  
+             
+        Set sAux;
+        sAux.addAtomSet(asAux);
+        domRes.insert(domRes.begin(), sAux);
+        lmRes.insert(lmRes.begin(), lmAux);
+
+        PWLMap auxRes(domRes, lmRes);
+        return auxRes;
+      }
+
+      ++ito1;
+      ++itg2;
+      ++ito2;
+      ++itints;
+      ++count;
+    }
+  }
+
+  PWLMap auxRes;
+  return auxRes;
+}
+
+PWLMap minPW(Set &dom, LMap &lm1, LMap &lm2){
+  OrdCT<Set> sres;
+  OrdCT<LMap> lres;
+
+  Set sres1;
+  Set sres2;
+  LMap lres1;
+  LMap lres2;
+
+  UnordCT<AtomSet> asets = dom.asets_();
+  UnordCT<AtomSet>::iterator itas = asets.begin();
+
+  if(!dom.empty()){
+    PWLMap aux;
+    AtomSet asAux = *itas; 
+    aux = minAtomPW(asAux, lm1, lm2);
+    sres1 = *(aux.dom_().begin());
+    lres1 = *(aux.lmap_().begin());
+    ++itas;
+
+    OrdCT<Set> d;
+    OrdCT<Set>::iterator itd;
+    OrdCT<LMap> l;
+    OrdCT<LMap>::iterator itl;
+    while(itas != asets.end()){
+      asAux = *itas;
+      aux = minAtomPW(asAux, lm1, lm2);
+      d = aux.dom_();
+      itd = d.begin();
+      l = aux.lmap_();
+      itl = l.begin();
+
+      while(itd != d.end()){
+        if(*itl == lres1)
+          sres1 = sres1.cup(*itd);
+
+        else{
+          if(sres2.empty()){
+            sres2 = *itd;
+            lres2 = *itl;
+          }
+ 
+          else
+            sres2 = sres2.cup(*itd);
+        }
+ 
+        ++itd;
+        ++itl;
+      }
+
+      ++itas;
+    }
+  }
+
+  if(!sres1.empty() && !lres1.empty()){
+    sres.insert(sres.end(), sres1);
+    lres.insert(lres.end(), lres1);
+  }
+
+  if(!sres2.empty() && !lres2.empty()){
+    sres.insert(sres.end(), sres2);
+    lres.insert(lres.end(), lres2);
+  }
+
+  PWLMap res(sres, lres);
+  return res;  
+}
+
+
+/*-----------------------------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------------------*/
+// Graph definition
+/*-----------------------------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------------------*/
 /*
 struct SetVertex{
   SetVertex(){};
