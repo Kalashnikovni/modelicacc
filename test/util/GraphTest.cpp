@@ -732,6 +732,50 @@ void TestMultiMin1(){
   BOOST_CHECK(res1 == res2);
 }
 
+void TestMultiReplace1(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 2, 10);
+  Interval i3(1, 3, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  Interval i4(1, 4, 10);
+
+  MultiInterval res1 = mi1.replace(i4, 1);
+
+  MultiInterval res2;
+  res2.addInter(i4);
+  res2.addInter(i2);
+  res2.addInter(i3);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMultiReplace2(){
+  Interval i1(1, 1, 10);
+  Interval i2(1, 2, 10);
+  Interval i3(1, 3, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+
+  Interval i4(1, 4, 10);
+
+  MultiInterval res1 = mi1.replace(i4, 4);
+
+  MultiInterval res2;
+  res2.addInter(i1);
+  res2.addInter(i2);
+  res2.addInter(i3);
+
+  BOOST_CHECK(res1 == res2);
+}
+
 // -- AtomicSets --------------------------------------------------------------//
 
 void TestASetCreation1(){
@@ -2172,6 +2216,78 @@ void TestPWLMapComp1(){
   BOOST_CHECK(res1 == res2);
 }
 
+void TestPWLMapComp2(){
+  Interval i1(3, 1, 100);
+  Interval i2(50, 5, 150);
+  Interval i3(100, 10, 1000);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+ 
+  AtomSet as1(mi1);
+
+  Interval i4(35, 7, 99);
+  
+  MultiInterval mi2;
+  mi2.addInter(i1);
+  mi2.addInter(i1);
+  mi2.addInter(i4);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  Interval i5(200, 20, 400);
+  Interval i6(5, 5, 100);
+  Interval i7(10, 9, 90);
+
+  MultiInterval mi3;
+  mi3.addInter(i5);
+  mi3.addInter(i6);
+  mi3.addInter(i7);
+
+  AtomSet as3(mi3);
+
+  Interval i8(150, 50, 300);
+  Interval i9(200, 3, 500);
+  Interval i10(4, 4, 80);
+
+  MultiInterval mi4;
+  mi4.addInter(i8);
+  mi4.addInter(i9);
+  mi4.addInter(i10);
+
+  AtomSet as4(mi4);
+
+  Set s2;
+  s2.addAtomSet(as3);
+  s2.addAtomSet(as4);
+
+  LMap lm1;
+  lm1.addGO(1, -3);
+  lm1.addGO(0, 0);
+  lm1.addGO(1, 1);
+
+  LMap lm2;
+  lm2.addGO(3, 2);
+  lm2.addGO(1, -2);
+  lm2.addGO(1, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  PWLMap res1 = pw1.compPW(pw1);
+
+  PWLMap res2;
+
+  BOOST_CHECK(res1 == res2);
+}
+
 void TestPWLMapMinInvComp1(){
   Interval i1(1, 1, 10);
 
@@ -2257,6 +2373,97 @@ void TestPWLMapMinInvComp1(){
   BOOST_CHECK(res1 == res2);
 }
 
+void TestPWLMapCombine1(){
+  Interval i1(1, 1, 10);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+ 
+  Interval i2(20, 3, 30);
+
+  MultiInterval mi2;
+  mi2.addInter(i1);
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  Interval i3(35, 5, 50);
+
+  MultiInterval mi3;
+  mi3.addInter(i1);
+  mi3.addInter(i2);
+  mi3.addInter(i3);
+
+  AtomSet as3(mi3);
+
+  MultiInterval mi4;
+  mi4.addInter(i3);
+  mi4.addInter(i3);
+  mi4.addInter(i2);
+
+  AtomSet as4(mi4);
+
+  Set s2;
+  s2.addAtomSet(as3);
+  s2.addAtomSet(as4);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+
+  LMap lm2;
+  lm2.addGO(0, 3);
+  lm2.addGO(0, 3);
+  lm2.addGO(1, 1);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  Interval i4(1, 1, 20);
+
+  MultiInterval mi5;
+  mi5.addInter(i4);
+  mi5.addInter(i4);
+  mi5.addInter(i4);
+
+  AtomSet as5(mi5);
+
+  Set s3;
+  s3.addAtomSet(as5);
+
+  LMap lm3;
+  lm3.addGO(1, 1);
+  lm3.addGO(1, 0);
+  lm3.addGO(1, 0);
+  
+  PWLMap pw2;
+  pw2.addSetLM(s3, lm3);
+
+  PWLMap res1 = pw1.combine(pw2);
+
+  Set s4 = pw1.wholeDom();
+
+  Set s5 = s3.diff(s4); 
+
+  PWLMap res2;
+  res2.addSetLM(s1, lm1);
+  res2.addSetLM(s2, lm2);
+  res2.addSetLM(s5, lm3);
+
+  BOOST_CHECK(res1 == res2);
+}
+
 void TestMinAtomPW1(){
   Interval i1(2, 2, 20);
   Interval i2(1, 1, 10);
@@ -2312,7 +2519,6 @@ void TestMinAtomPW1(){
   BOOST_CHECK(res1 == res2);
 }
 
-//TODO
 void TestMinAtomPW2(){
   Interval i1(2, 2, 20);
   Interval i2(1, 1, 10);
@@ -2451,6 +2657,983 @@ void TestMinPW2(){
   BOOST_CHECK(res1 == res2);
 }
 
+void TestMinMap1(){
+  Interval i1(1, 1, 10);
+ 
+  MultiInterval mi1;
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(15, 3, 30);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  Interval i3(12, 3, 12);
+
+  MultiInterval mi3;
+  mi3.addInter(i3);
+
+  AtomSet as3(mi3);
+
+  Interval i4(50, 5, 100);
+
+  MultiInterval mi4;
+  mi4.addInter(i4);
+
+  AtomSet as4(mi4);
+
+  Set s2;
+  s2.addAtomSet(as3);
+  s2.addAtomSet(as4);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+
+  LMap lm2;
+  lm2.addGO(1, 1);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2); 
+
+  Interval i5(1, 2, 20);
+
+  MultiInterval mi5;
+  mi5.addInter(i5);
+
+  AtomSet as5(mi5);
+
+  Interval i6(30, 5, 60);
+
+  MultiInterval mi6;
+  mi6.addInter(i6);
+
+  AtomSet as6(mi6);
+
+  Set s3;
+  s3.addAtomSet(as5);
+  s3.addAtomSet(as6);
+
+  Interval i7(75, 5, 90);
+  
+  MultiInterval mi7;
+  mi7.addInter(i7);
+
+  AtomSet as7(mi7);
+
+  Interval i8(95, 1, 100);
+
+  MultiInterval mi8;
+  mi8.addInter(i8);
+
+  AtomSet as8(mi8);
+
+  Set s4;
+  s4.addAtomSet(as7);
+  s4.addAtomSet(as8);
+
+  LMap lm3;
+  lm3.addGO(0, 100);
+
+  LMap lm4;
+  lm4.addGO(1, 0);
+
+  PWLMap pw2;
+  pw2.addSetLM(s3, lm3);
+  pw2.addSetLM(s4, lm4);
+
+  PWLMap res1 = minMap(pw1, pw2);
+
+  Interval i9(1, 2, 9);
+
+  MultiInterval mi9;
+  mi9.addInter(i9);
+
+  AtomSet as9(mi9);
+
+  Interval i10(15, 6, 18);
+
+  MultiInterval mi10;
+  mi10.addInter(i10);
+
+  AtomSet as10(mi10);
+
+  Interval i11(30, 15, 30);
+
+  MultiInterval mi11;
+  mi11.addInter(i11);
+
+  AtomSet as11(mi11);
+
+
+  Set s5;
+  s5.addAtomSet(as9);
+  s5.addAtomSet(as10);
+  s5.addAtomSet(as11);
+
+  Interval i12(75, 5, 90);
+
+  MultiInterval mi12;
+  mi12.addInter(i12);
+
+  AtomSet as12(mi12);
+
+  Interval i13(95, 5, 100);
+
+  MultiInterval mi13;
+  mi13.addInter(i13);
+
+  AtomSet as13(mi13);
+  
+  Set s6;
+  s6.addAtomSet(as12);
+  s6.addAtomSet(as13);
+
+  Interval i14(50, 5, 60);
+
+  MultiInterval mi14;
+  mi14.addInter(i14);
+
+  AtomSet as14(mi14);
+
+  Set s7;
+  s7.addAtomSet(as14);
+
+  PWLMap res2;
+  res2.addSetLM(s6, lm4);
+  res2.addSetLM(s7, lm2);
+  res2.addSetLM(s5, lm1);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestReduce1(){
+  Interval i1(4, 1, 15);
+ 
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+ 
+  Interval i2(20, 2, 25);
+
+  MultiInterval mi2;
+  mi2.addInter(i1);
+  mi2.addInter(i2);
+  mi2.addInter(i1);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);  
+
+  Interval i3(15, 5, 50);
+
+  MultiInterval mi3;
+  mi3.addInter(i1);
+  mi3.addInter(i3);
+  mi3.addInter(i2);
+
+  AtomSet as3(mi3);
+
+  Interval i4(40, 5, 45);
+
+  MultiInterval mi4;
+  mi4.addInter(i2);
+  mi4.addInter(i4);
+  mi4.addInter(i4);
+
+  AtomSet as4(mi4);
+
+  Set s2; 
+  s2.addAtomSet(as3);
+  s2.addAtomSet(as4);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(1, -3);
+  lm1.addGO(3, 0);
+
+  LMap lm2;
+  lm2.addGO(2, 0);
+  lm2.addGO(1, 0);
+  lm2.addGO(4, 4);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  PWLMap res1 = reduceMapN(pw1, 2);
+
+  Interval i5(4, 3, 15);
+
+  MultiInterval mi5;
+  mi5.addInter(i1);
+  mi5.addInter(i5);
+  mi5.addInter(i1);
+
+  AtomSet as5(mi5);
+
+  Set s3;
+  s3.addAtomSet(as5);
+
+  LMap lm3;
+  lm3.addGO(1, 0);
+  lm3.addGO(0, 1);
+  lm3.addGO(3, 0);
+
+  Interval i6(5, 3, 15);
+
+  MultiInterval mi6;
+  mi6.addInter(i1);
+  mi6.addInter(i6);
+  mi6.addInter(i1);
+
+  AtomSet as6(mi6);
+
+  Set s4;
+  s4.addAtomSet(as6);
+
+  LMap lm4;
+  lm4.addGO(1, 0);
+  lm4.addGO(0, 2);
+  lm4.addGO(3, 0);
+
+  Interval i7(6, 3, 15);
+
+  MultiInterval mi7;
+  mi7.addInter(i1);
+  mi7.addInter(i7);
+  mi7.addInter(i1);
+
+  AtomSet as7(mi7);
+
+  Set s5;
+  s5.addAtomSet(as7);
+ 
+  LMap lm5;
+  lm5.addGO(1, 0); 
+  lm5.addGO(0, 3); 
+  lm5.addGO(3, 0); 
+
+  Set s6;
+  s6.addAtomSet(as2);
+
+  PWLMap res2;
+  res2.addSetLM(s6, lm1);
+  res2.addSetLM(s2, lm2);
+  res2.addSetLM(s3, lm3);
+  res2.addSetLM(s4, lm4);
+  res2.addSetLM(s5, lm5);
+
+  BOOST_CHECK(res1 == res2); 
+}
+
+void TestMapInf1(){
+  Interval i1(3, 1, 100);
+  Interval i2(50, 5, 150);
+  Interval i3(100, 10, 1000);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  mi1.addInter(i3);
+ 
+  AtomSet as1(mi1);
+
+  Interval i4(35, 7, 99);
+  
+  MultiInterval mi2;
+  mi2.addInter(i1);
+  mi2.addInter(i1);
+  mi2.addInter(i4);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  Interval i5(200, 20, 400);
+  Interval i6(5, 5, 100);
+  Interval i7(10, 9, 90);
+
+  MultiInterval mi3;
+  mi3.addInter(i5);
+  mi3.addInter(i6);
+  mi3.addInter(i7);
+
+  AtomSet as3(mi3);
+
+  Interval i8(150, 50, 300);
+  Interval i9(200, 3, 500);
+  Interval i10(4, 4, 80);
+
+  MultiInterval mi4;
+  mi4.addInter(i8);
+  mi4.addInter(i9);
+  mi4.addInter(i10);
+
+  AtomSet as4(mi4);
+
+  Set s2;
+  s2.addAtomSet(as3);
+  s2.addAtomSet(as4);
+
+  LMap lm1;
+  lm1.addGO(1, -3);
+  lm1.addGO(0, 0);
+  lm1.addGO(1, 1);
+
+  LMap lm2;
+  lm2.addGO(3, 2);
+  lm2.addGO(1, -2);
+  lm2.addGO(1, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  PWLMap res1 = mapInf(pw1);
+
+  PWLMap res2;
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMapInf2(){
+  Interval i1(1, 1, 100);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Set s1;
+  s1.addAtomSet(as1);
+
+  Interval i2(200, 4, 500);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  Interval i3(200, 1, 2000);
+
+  MultiInterval mi3;
+  mi3.addInter(i1);
+  mi3.addInter(i1);
+  mi3.addInter(i3);
+
+  AtomSet as3(mi3);
+
+  Set s2;
+  s2.addAtomSet(as2);
+  s2.addAtomSet(as3);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+
+  LMap lm2;
+  lm2.addGO(0, 1);
+  lm2.addGO(0, 1);
+  lm2.addGO(0, 1);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  PWLMap res1 = mapInf(pw1);
+
+  PWLMap res2 = pw1;
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMapInf3(){
+  Interval i1(1, 1, 100);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Set s1;
+  s1.addAtomSet(as1);
+
+  Interval i2(200, 4, 500);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  Interval i3(200, 1, 2000);
+
+  MultiInterval mi3;
+  mi3.addInter(i1);
+  mi3.addInter(i1);
+  mi3.addInter(i3);
+
+  AtomSet as3(mi3);
+
+  Set s2;
+  s2.addAtomSet(as2);
+  s2.addAtomSet(as3);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+
+  LMap lm2;
+  lm2.addGO(0, 150);
+  lm2.addGO(0, 150);
+  lm2.addGO(0, 150);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  PWLMap res1 = mapInf(pw1);
+
+  PWLMap res2;
+  res2.addSetLM(s1, lm1);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMinAdjComp1(){
+  Interval i1(50, 1, 100);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(150, 5, 200);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+  mi2.addInter(i1);
+
+  AtomSet as2(mi2);  
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+
+  Interval i3(75, 5, 150);
+  Interval i4(80, 5, 150);
+  Interval i5(85, 5, 150);
+
+  MultiInterval mi3;
+  mi3.addInter(i3);
+  mi3.addInter(i4);
+  mi3.addInter(i5);
+
+  AtomSet as3(mi3);
+
+  Set s2;
+  s2.addAtomSet(as3);
+
+  Interval i6(200, 1, 200);
+
+  MultiInterval mi4;
+  mi4.addInter(i6);
+  mi4.addInter(i6);
+  mi4.addInter(i6);
+
+  AtomSet as4(mi4);
+
+  Set s3;
+  s3.addAtomSet(as4);
+
+  LMap lm2;
+  lm2.addGO(0, 3);
+  lm2.addGO(0, 3);
+  lm2.addGO(0, 3);
+
+  LMap lm3;
+  lm3.addGO(1, -10);
+  lm3.addGO(1, -10);
+  lm3.addGO(0, -10);
+
+  PWLMap pw2;
+  pw2.addSetLM(s2, lm2);
+  pw2.addSetLM(s3, lm3);
+
+  PWLMap res1 = minAdjCompMap(pw1, pw2); 
+
+  // pw1.inv = pw1
+  PWLMap res2 = pw2.compPW(pw1);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMinAdjComp2(){
+  Interval i1(50, 1, 100);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(150, 5, 200);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+  mi2.addInter(i1);
+
+  AtomSet as2(mi2);  
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(0, 1);
+  lm1.addGO(1, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+
+  Interval i3(75, 5, 150);
+  Interval i4(80, 5, 150);
+  Interval i5(85, 5, 150);
+
+  MultiInterval mi3;
+  mi3.addInter(i3);
+  mi3.addInter(i4);
+  mi3.addInter(i5);
+
+  AtomSet as3(mi3);
+
+  Set s2;
+  s2.addAtomSet(as3);
+
+  Interval i6(200, 1, 200);
+
+  MultiInterval mi4;
+  mi4.addInter(i6);
+  mi4.addInter(i6);
+  mi4.addInter(i6);
+
+  AtomSet as4(mi4);
+
+  Set s3;
+  s3.addAtomSet(as4);
+
+  LMap lm2;
+  lm2.addGO(0, 3);
+  lm2.addGO(0, 3);
+  lm2.addGO(0, 3);
+
+  LMap lm3;
+  lm3.addGO(1, -10);
+  lm3.addGO(1, -10);
+  lm3.addGO(0, -10);
+
+  PWLMap pw2;
+  pw2.addSetLM(s2, lm2);
+  pw2.addSetLM(s3, lm3);
+
+  PWLMap res1 = minAdjCompMap(pw1, pw2); 
+
+  PWLMap res2;
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMinAdjComp3(){
+  Interval i1(85, 1, 100);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(150, 5, 200);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+  mi2.addInter(i1);
+
+  AtomSet as2(mi2);  
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(0, 1);
+  lm1.addGO(1, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+
+  Interval i3(75, 5, 150);
+  Interval i4(80, 5, 150);
+  Interval i5(85, 5, 150);
+
+  MultiInterval mi3;
+  mi3.addInter(i3);
+  mi3.addInter(i4);
+  mi3.addInter(i5);
+
+  AtomSet as3(mi3);
+
+  Set s2;
+  s2.addAtomSet(as3);
+
+  Interval i6(200, 1, 200);
+
+  MultiInterval mi4;
+  mi4.addInter(i6);
+  mi4.addInter(i6);
+  mi4.addInter(i6);
+
+  AtomSet as4(mi4);
+
+  Set s3;
+  s3.addAtomSet(as4);
+
+  LMap lm2;
+  lm2.addGO(0, 3);
+  lm2.addGO(0, 3);
+  lm2.addGO(0, 3);
+
+  LMap lm3;
+  lm3.addGO(1, -10);
+  lm3.addGO(1, -10);
+  lm3.addGO(0, -10);
+
+  PWLMap pw2;
+  pw2.addSetLM(s2, lm2);
+  pw2.addSetLM(s3, lm3);
+
+  PWLMap res1 = minAdjCompMap(pw1, pw2); 
+
+  PWLMap res2;
+
+  Interval i7(85, 5, 100);
+  Interval i8(1, 1, 1);
+
+  MultiInterval mi5;
+  mi5.addInter(i7);
+  mi5.addInter(i8); 
+  mi5.addInter(i7);
+
+  AtomSet as5(mi5);
+
+  Interval i9(150, 5, 150);
+
+  MultiInterval mi6;
+  mi6.addInter(i9);
+  mi6.addInter(i8);
+  mi6.addInter(i7);
+
+  AtomSet as6(mi6);
+
+  Set s4;
+  s4.addAtomSet(as5);
+  s4.addAtomSet(as6);
+
+  res2.addSetLM(s4, lm2);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMinAdjComp4(){
+  Interval i1(85, 1, 100);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(150, 5, 200);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+  mi2.addInter(i1);
+
+  AtomSet as2(mi2);  
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  LMap lm1;
+  lm1.addGO(0, 1);
+  lm1.addGO(0, 1);
+  lm1.addGO(0, 1);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+
+  Interval i3(75, 5, 150);
+  Interval i4(80, 5, 150);
+  Interval i5(85, 5, 150);
+
+  MultiInterval mi3;
+  mi3.addInter(i3);
+  mi3.addInter(i4);
+  mi3.addInter(i5);
+
+  AtomSet as3(mi3);
+
+  Set s2;
+  s2.addAtomSet(as3);
+
+  Interval i6(200, 1, 200);
+
+  MultiInterval mi4;
+  mi4.addInter(i6);
+  mi4.addInter(i6);
+  mi4.addInter(i6);
+
+  AtomSet as4(mi4);
+
+  Set s3;
+  s3.addAtomSet(as4);
+
+  LMap lm2;
+  lm2.addGO(1, 3);
+  lm2.addGO(0, 3);
+  lm2.addGO(2, 3);
+
+  LMap lm3;
+  lm3.addGO(1, -10);
+  lm3.addGO(1, -10);
+  lm3.addGO(0, -10);
+
+  PWLMap pw2;
+  pw2.addSetLM(s2, lm2);
+  pw2.addSetLM(s3, lm3);
+
+  PWLMap res1 = minAdjCompMap(pw1, pw2); 
+
+  PWLMap res2;
+
+  Interval i7(1, 1, 1);
+
+  MultiInterval mi5;
+  mi5.addInter(i7);
+  mi5.addInter(i7); 
+  mi5.addInter(i7);
+
+  AtomSet as5(mi5);
+
+  Set s4;
+  s4.addAtomSet(as5);
+
+  LMap lm4;
+  lm4.addGO(0, 88);
+  lm4.addGO(0, 3);
+  lm4.addGO(0, 173);
+
+  res2.addSetLM(s4, lm4);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+void TestMinAdj1(){
+  Interval i1(10, 1, 100);
+
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i1);
+
+  AtomSet as1(mi1);
+
+  Interval i2(101, 2, 200);
+
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  mi2.addInter(i2);
+
+  AtomSet as2(mi2);
+
+  Set s1;
+  s1.addAtomSet(as1);
+  s1.addAtomSet(as2);
+
+  MultiInterval mi3;
+  mi3.addInter(i1);
+  mi3.addInter(i2);
+
+  AtomSet as3(mi3);
+
+  Set s2;
+  s2.addAtomSet(as3);
+
+  LMap lm1;
+  lm1.addGO(1, 0);
+  lm1.addGO(1, 0);
+
+  LMap lm2;
+  lm2.addGO(2, 0);
+  lm2.addGO(2, 0);
+
+  PWLMap pw1;
+  pw1.addSetLM(s1, lm1);
+  pw1.addSetLM(s2, lm2);
+
+  Interval i3(5, 5, 50);
+
+  MultiInterval mi4;
+  mi4.addInter(i3);
+  mi4.addInter(i3);
+
+  AtomSet as4(mi4);
+
+  Set s3;
+  s3.addAtomSet(as4);
+
+  Interval i4(51, 3, 80);
+  
+  MultiInterval mi5;
+  mi5.addInter(i4);
+  mi5.addInter(i4);
+
+  AtomSet as5(mi5);
+
+  Interval i6(90, 1, 150);
+  Interval i7(95, 1, 150);
+
+  MultiInterval mi6;
+  mi6.addInter(i6);
+  mi6.addInter(i7);
+
+  AtomSet as6(mi6);
+
+  Set s4;
+  s4.addAtomSet(as5);
+  s4.addAtomSet(as6);
+
+  LMap lm3;
+  lm3.addGO(0, 1);
+  lm3.addGO(1, 0);
+
+  LMap lm4;
+  lm4.addGO(2, 3);
+  lm4.addGO(2, 1);
+
+  PWLMap pw2;
+  pw2.addSetLM(s3, lm3);
+  pw2.addSetLM(s4, lm4);
+
+  PWLMap res1 = minAdjMap(pw1, pw2);
+
+  Interval i8(180, 2, 200);
+  Interval i9(202, 4, 298);
+
+  MultiInterval mi7;
+  mi7.addInter(i8);
+  mi7.addInter(i9);
+
+  AtomSet as7(mi7);
+
+  Set s5;
+  s5.addAtomSet(as7);
+
+  Interval i10(10, 5, 50);
+
+  MultiInterval mi8;
+  mi8.addInter(i10); 
+  mi8.addInter(i10); 
+
+  AtomSet as8(mi8);
+  
+  Set s6;
+  s6.addAtomSet(as8);
+
+  Interval i11(101, 2, 149);
+
+  MultiInterval mi9;
+  mi9.addInter(i11);
+  mi9.addInter(i11);
+
+  AtomSet as9(mi9);
+
+  MultiInterval mi10;
+  mi10.addInter(i4);
+  mi10.addInter(i4);
+
+  AtomSet as10(mi10);
+
+  Interval i12(90, 1, 100);
+  Interval i13(95, 1, 100);
+
+  MultiInterval mi11;
+  mi11.addInter(i12);
+  mi11.addInter(i13);
+
+  AtomSet as11(mi11);
+
+  Set s7;
+  s7.addAtomSet(as9);
+  s7.addAtomSet(as10);
+  s7.addAtomSet(as11);
+
+  LMap lm5;
+  lm5.addGO(1, 3);
+  lm5.addGO(1, 1);
+
+  PWLMap res2;
+  res2.addSetLM(s5, lm5);
+  res2.addSetLM(s6, lm3);
+  res2.addSetLM(s7, lm4);
+
+  BOOST_CHECK(res1 == res2);
+}
+
+
 //____________________________________________________________________________//
 
 test_suite *init_unit_test_suite(int, char *[]){
@@ -2497,6 +3680,8 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiDiff5));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiCrossProd1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiMin1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiReplace1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMultiReplace2));
 
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestASetCreation1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestASetEmpty1));
@@ -2542,12 +3727,24 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapImage2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapPre1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapComp1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapComp2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapMinInvComp1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestPWLMapCombine1));
 
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAtomPW1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAtomPW2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinPW1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinPW2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinMap1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestReduce1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMapInf1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMapInf2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMapInf3));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAdjComp1));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAdjComp2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAdjComp3));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAdjComp4));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAdj1));
 
   return 0;
 }

@@ -1647,13 +1647,14 @@ struct PWLMapImp1{
 
   CT1<SetImp> dom; 
   CT1<LMapImp> lmap;  
+  int ndim;
 
   PWLMapImp1(){}
   PWLMapImp1(CTSet d, CTLMap l){
     CTLMapIt itl = l.begin();
     int auxndim = (*(d.begin())).ndim_();
     bool different = false;
-   
+  
     if(d.size() == l.size()){
       BOOST_FOREACH(SetImp sd, d){
         if(sd.ndim_() != auxndim || (*itl).ndim_() != auxndim)
@@ -1669,11 +1670,13 @@ struct PWLMapImp1{
         CTLMap aux2;
         dom = aux1;
         lmap = aux2;
+        ndim = 0;
       }
 
       else{
         dom = d;
         lmap = l;
+        ndim = auxndim;
       }
     }
 
@@ -1683,7 +1686,8 @@ struct PWLMapImp1{
       CTSet aux1;
       CTLMap aux2;
       dom = aux1;
-      lmap = aux2;     
+      lmap = aux2;
+      ndim = 0;     
     }
   }
   // Id PWLMap, the set stays the same, the map is the id map
@@ -1698,6 +1702,7 @@ struct PWLMapImp1{
 
     dom = d;
     lmap = lm;
+    ndim = 1;
   }
 
   CTSet dom_(){
@@ -1706,6 +1711,10 @@ struct PWLMapImp1{
 
   CTLMap lmap_(){
     return lmap;
+  }
+
+  int ndim_(){
+    return ndim;
   }
 
   bool empty(){
@@ -1875,10 +1884,10 @@ struct PWLMapImp1{
   }
 
   PWLMapImp1 combine(PWLMapImp1 &pw2){
-    CTSet sres;
-    CTSetIt its = sres.begin();
-    CTLMap lres;
-    CTLMapIt itl = lres.begin();
+    CTSet sres = dom;
+    CTSetIt its = sres.end();
+    CTLMap lres = lmap;
+    CTLMapIt itl = lres.end();
 
     if(empty())
       return pw2;
@@ -1938,6 +1947,10 @@ struct PWLMapAbs{
 
   CTLMap lmap_(){
     return pw.lmap_();
+  }
+
+  int ndim_(){
+    return pw.ndim_();
   }
 
   bool empty(){
@@ -2346,41 +2359,43 @@ PWLMap minPW(Set &dom, LMap &lm1, LMap &lm2){
     PWLMap aux;
     AtomSet asAux = *itas; 
     aux = minAtomPW(asAux, lm1, lm2);
-    sres1 = *(aux.dom_().begin());
-    lres1 = *(aux.lmap_().begin());
-    ++itas;
+    if(!aux.empty()){
+      sres1 = *(aux.dom_().begin());
+      lres1 = *(aux.lmap_().begin());
+      ++itas;
 
-    OrdCT<Set> d;
-    OrdCT<Set>::iterator itd;
-    OrdCT<LMap> l;
-    OrdCT<LMap>::iterator itl;
-    while(itas != asets.end()){
-      asAux = *itas;
-      aux = minAtomPW(asAux, lm1, lm2);
-      d = aux.dom_();
-      itd = d.begin();
-      l = aux.lmap_();
-      itl = l.begin();
+      OrdCT<Set> d;
+      OrdCT<Set>::iterator itd;
+      OrdCT<LMap> l;
+      OrdCT<LMap>::iterator itl;
+      while(itas != asets.end()){
+        asAux = *itas;
+        aux = minAtomPW(asAux, lm1, lm2);
+        d = aux.dom_();
+        itd = d.begin();
+        l = aux.lmap_();
+        itl = l.begin();
 
-      while(itd != d.end()){
-        if(*itl == lres1)
-          sres1 = sres1.cup(*itd);
+        while(itd != d.end()){
+          if(*itl == lres1)
+            sres1 = sres1.cup(*itd);
 
-        else{
-          if(sres2.empty()){
-            sres2 = *itd;
-            lres2 = *itl;
+          else{
+            if(sres2.empty()){
+              sres2 = *itd;
+              lres2 = *itl;
+            }
+ 
+            else
+              sres2 = sres2.cup(*itd);
           }
  
-          else
-            sres2 = sres2.cup(*itd);
+          ++itd;
+          ++itl;
         }
- 
-        ++itd;
-        ++itl;
-      }
 
-      ++itas;
+        ++itas;
+      }
     }
   }
 
@@ -2396,6 +2411,438 @@ PWLMap minPW(Set &dom, LMap &lm1, LMap &lm2){
 
   PWLMap res(sres, lres);
   return res;  
+}
+
+PWLMap minMap(PWLMap &pw1, PWLMap &pw2){
+  PWLMap res;
+
+  OrdCT<LMap> lm1 = pw1.lmap_();
+  OrdCT<LMap>::iterator itl1 = lm1.begin();
+  OrdCT<LMap> lm2 = pw2.lmap_();
+  OrdCT<LMap>::iterator itl2 = lm2.begin();
+
+  if(!pw1.empty() && !pw2.empty()){
+    BOOST_FOREACH(Set s1i, pw1.dom_()){
+      OrdCT<LMap>::iterator itl2 = lm2.begin();
+
+      BOOST_FOREACH(Set s2j, pw2.dom_()){
+        Set dom = s1i.cap(s2j);
+
+        if(!dom.empty()){
+          PWLMap aux = minPW(dom, *itl1, *itl2);
+
+          if(aux.empty())
+            res = aux;
+
+          else
+            res = aux.combine(res);
+        }
+
+        ++itl2;
+      }
+
+      ++itl1;
+    }
+  }
+
+  return res;
+}
+
+PWLMap reduceMapN(PWLMap pw, int dim){
+  OrdCT<Set> sres = pw.dom_();
+  OrdCT<Set>::iterator itsres = sres.end();
+  OrdCT<LMap> lres = pw.lmap_();
+  OrdCT<LMap>::iterator itlres = lres.end();
+
+  OrdCT<LMap> lm = pw.lmap_();
+  OrdCT<LMap>::iterator itlm = lm.begin();
+
+  unsigned int i = 1;
+  BOOST_FOREACH(Set di, pw.dom_()){
+    int count1 = 1;
+
+    OrdCT<NI2> g = (*itlm).gain_();
+    OrdCT<NI2>::iterator itg = g.begin();
+    OrdCT<NI2> o = (*itlm).off_();
+    OrdCT<NI2>::iterator ito = o.begin();
+    // Get the dim-th gain and offset
+    while(count1 < dim){
+      ++itg;
+      ++ito;
+      ++count1;
+    }
+
+    if(*itg == 1 && *ito < 0){
+      NI2 off = -(*ito);
+
+      BOOST_FOREACH(AtomSet adom, di.asets_()){
+        MultiInterval mi = adom.aset_();
+        OrdCT<Interval> inters = mi.inters_();
+        OrdCT<Interval>::iterator itints = inters.begin();
+
+        int count2 = 1;
+        while(count2 < dim){
+          ++itints;
+          ++count2;
+        }
+
+        NI1 loint = (*itints).lo_();
+        NI1 hiint = (*itints).hi_();
+        if((hiint - loint) > (off * off)){
+          OrdCT<Set> news;
+          OrdCT<Set>::iterator itnews = news.begin();
+          OrdCT<LMap> newl;
+          OrdCT<LMap>::iterator itnewl = newl.begin();
+
+          for(int k = 1; k <= off; k++){
+            OrdCT<NI2> newo = (*itlm).off_();
+            OrdCT<NI2>::iterator itnewo = newo.begin();
+
+            OrdCT<NI2> resg;
+            OrdCT<NI2>::iterator itresg = resg.begin();
+            OrdCT<NI2> reso;
+            OrdCT<NI2>::iterator itreso = reso.begin();
+
+            int count3 = 1; 
+
+            BOOST_FOREACH(NI2 gi, (*itlm).gain_()){
+              if(count3 == dim){
+                itresg = resg.insert(itresg, 0);
+                itreso = reso.insert(itreso, loint + k - off - 1);
+              }
+
+              else{
+                itresg = resg.insert(itresg, gi);
+                itreso = reso.insert(itreso, *itnewo);
+              }
+
+              ++itresg;
+              ++itreso;
+              ++itnewo;
+              ++count3;
+            }
+           
+            LMap newlmap(resg, reso); 
+            Interval newinter(loint + k - 1, off, hiint); 
+            AtomSet auxas = adom.replace(newinter, dim);
+            Set newset;
+            newset.addAtomSet(auxas);
+
+            itnews = news.insert(itnews, newset);
+            ++itnews;
+            itnewl = newl.insert(itnewl, newlmap);
+            ++itnewl;
+          }
+
+          PWLMap newmap(news, newl);
+
+          UnordCT<AtomSet> auxnewd;
+          BOOST_FOREACH(AtomSet auxasi, di.asets_()){
+            if(auxasi != adom)
+              auxnewd.insert(auxasi);
+          }  
+          
+          Set newdomi(auxnewd);
+
+          if(newdomi.empty()){
+            if(i < sres.size()){
+              OrdCT<LMap> auxl = lres;
+              OrdCT<LMap>::iterator itauxl = auxl.begin();
+
+              unsigned int count4 = 1;
+              BOOST_FOREACH(Set si, sres){
+                if(count4 != i){
+                  itsres = sres.insert(itsres, si);
+                  ++itsres;
+                  itlres = lres.insert(itlres, *itauxl);
+                  ++itlres;
+                }
+
+                ++count4;
+                ++itauxl;
+              }
+            }
+
+            else{
+              OrdCT<LMap> auxl = lres;
+              OrdCT<LMap>::iterator itauxl = auxl.begin();
+
+              unsigned int count4 = 1;
+              BOOST_FOREACH(Set si, sres){
+                if(count4 < i){
+                  itsres = sres.insert(itsres, si);
+                  ++itsres;
+                  itlres = lres.insert(itlres, *itauxl);
+                  ++itlres;
+                }
+
+                ++count4;
+                ++itauxl;
+              }
+            }
+          }
+
+          else{
+            OrdCT<Set> auxs;
+            OrdCT<Set>::iterator itauxs = auxs.begin();
+            OrdCT<Set>::iterator itauxsres = sres.begin();
+            unsigned int count5 = 1;
+            while(itauxsres != sres.end()){ 
+              if(count5 == i)
+                itauxs = auxs.insert(itauxs, newdomi);
+
+              else
+                itauxs = auxs.insert(itauxs, *itauxsres);
+
+              ++itauxs;
+              ++itauxsres;
+              ++count5; 
+            }
+
+            sres = auxs;
+          }
+
+          BOOST_FOREACH(Set newi, newmap.dom_()){
+            itsres = sres.insert(itsres, newi);
+            ++itsres;
+          }
+
+          BOOST_FOREACH(LMap newi, newmap.lmap_()){
+            itlres = lres.insert(itlres, newi);
+            ++itlres;
+          }
+        }
+      }
+    }
+
+    ++itlm;
+    ++i;
+  }
+
+  PWLMap res(sres, lres);
+  return res;
+}
+
+PWLMap mapInf(PWLMap pw){
+  PWLMap res = reduceMapN(pw, 1);
+
+  for(int i = 2; i <= res.ndim_(); ++i)
+    res = reduceMapN(res, i); 
+
+  int maxit = 0;
+
+  OrdCT<Set> doms = res.dom_();
+  OrdCT<Set>::iterator itdoms = doms.begin();
+  BOOST_FOREACH(LMap lm, res.lmap_()){
+    OrdCT<NI2> o = lm.off_();
+    OrdCT<NI2>::iterator ito = o.begin();
+
+    NI2 a = 0;
+    NI2 b = *(lm.gain_().begin());
+
+    BOOST_FOREACH(NI2 gi, lm.gain_()){
+      a = max(a, gi * abs(*ito));
+      b = min(b, gi);
+
+      ++ito; 
+    }
+
+    ito = o.begin();
+    NI2 its = 0;
+    if(a > 0){
+      BOOST_FOREACH(AtomSet as, (*itdoms).asets_()){
+        MultiInterval mi = as.aset_();
+        OrdCT<Interval> inters = mi.inters_();
+        OrdCT<Interval>::iterator itints = inters.begin();
+
+        BOOST_FOREACH(NI2 gi, lm.gain_()){
+          if(*ito < 0 && gi == 1)
+            its = max(its, ceil(((*itints).hi_() - (*itints).lo_()) / abs(*ito)));
+
+          ++itints;
+        }
+
+        ++ito;
+      }
+
+      maxit += its;
+    }
+
+    else if(b == 0)
+      ++maxit;
+
+    ++itdoms;
+  }
+
+  maxit = floor(log2(maxit)) + 1; 
+
+  for(int j = 0; j < maxit; ++j)
+    res = res.compPW(res);
+
+  return res;
+}
+
+PWLMap minAdjCompMap(PWLMap pw2, PWLMap pw1){
+  PWLMap res;
+
+  OrdCT<Set> auxd = pw2.dom_();
+  int auxsize = auxd.size();
+  if(auxsize == 1){
+    Set dominv = pw2.image(*(pw2.dom_().begin()));
+    LMap lminv = (*(pw2.lmap_().begin())).invLMap();
+
+    PWLMap invpw;
+    invpw.addSetLM(dominv, lminv);
+
+    NI2 maxg = *(lminv.gain_().begin());
+    NI2 ming = maxg;
+    BOOST_FOREACH(NI2 gi, lminv.gain_()){
+      maxg = max(maxg, gi);    
+      ming = min(ming, gi);
+    }
+
+    if(maxg < Inf){
+      res = pw1.compPW(invpw);  
+    }
+
+    else if(ming == Inf){
+      if(!pw2.empty()){
+        Set aux = pw1.image(*(pw2.dom_().begin()));
+        OrdCT<NI1> minaux = aux.minElem();    
+        OrdCT<NI1>::iterator itminaux = minaux.begin();
+        OrdCT<NI2> minaux2;
+        OrdCT<NI2>::iterator itminaux2 = minaux2.begin();
+
+        OrdCT<NI2> resg;
+        OrdCT<NI2>::iterator itresg = resg.begin();
+        for(unsigned int i = 0; i < minaux.size(); ++i){
+          itresg = resg.insert(itresg, 0);
+          ++itresg;
+          itminaux2 = minaux2.insert(itminaux2, (NI2) (*itminaux));
+          ++itminaux2;
+
+          ++itminaux;
+        }
+
+        LMap auxlm(resg, minaux2);
+        res.addSetLM(dominv, auxlm);
+      }
+    }
+
+    else{
+      Set aux1 = pw1.image(*(pw2.dom_().begin()));
+      OrdCT<NI1> minaux1 = aux1.minElem();    
+      OrdCT<NI1> minaux2 = (*(pw2.dom_().begin())).minElem();
+      OrdCT<NI1>::iterator it2 = minaux2.begin();
+
+      OrdCT<NI2> oi = lminv.off_();
+      OrdCT<NI2>::iterator itoi = oi.begin();
+
+      OrdCT<NI2> resg;
+      OrdCT<NI2>::iterator itresg = resg.begin();
+      OrdCT<NI2> reso;
+      OrdCT<NI2>::iterator itreso = reso.begin();
+      BOOST_FOREACH(NI2 gi, lminv.gain_()){
+        if(gi == Inf){
+          itresg = resg.insert(itresg, 0);
+          itreso = reso.insert(itreso, (NI2) (*it2));
+        }
+
+        else{
+          itresg = resg.insert(itresg, gi);
+          itreso = reso.insert(itreso, *itoi);
+        }
+
+        ++itresg;
+        ++itreso;
+        ++it2;
+        ++itoi;
+      }
+
+      LMap auxlm1(resg, reso);
+      PWLMap auxinv;
+      auxinv.addSetLM(dominv, auxlm1);
+
+      PWLMap auxres = pw1.compPW(auxinv);
+      if(!auxres.empty()){
+        Set domres = *(auxres.dom_().begin());
+        LMap lmres = *(auxres.lmap_().begin());
+        OrdCT<NI2> gres = lmres.gain_();
+        OrdCT<NI2>::iterator itgres = gres.begin();
+        oi = lmres.off_();
+        itoi = oi.begin();
+
+        OrdCT<NI2> resg2;
+        OrdCT<NI2>::iterator itresg2 = resg2.begin();
+        OrdCT<NI2> reso2;
+        OrdCT<NI2>::iterator itreso2 = reso2.begin();
+        OrdCT<NI1>::iterator it1 = minaux1.begin();    
+        BOOST_FOREACH(NI2 gi, lminv.gain_()){
+          if(gi == Inf){
+            itresg2 = resg2.insert(itresg2, 0);
+            itreso2 = reso2.insert(itreso2, (NI2) (*it1));
+          }
+
+          else{
+            itresg2 = resg2.insert(itresg2, *itgres);
+            itreso2 = reso2.insert(itreso2, *itoi);
+          }
+
+          ++itresg2;
+          ++itreso2;
+          ++it1;
+          ++itgres;
+          ++itoi;
+        }
+
+        LMap auxlm2(resg2, reso2);
+        res.addSetLM(domres, auxlm2);
+      }
+    }
+  }
+
+  else
+    WARNING("There should be only one pair in the map");
+
+  return res;
+}
+
+PWLMap minAdjMap(PWLMap pw2, PWLMap pw1){
+  PWLMap res;
+
+  if(!pw2.empty()){
+    OrdCT<Set> dom2 = pw2.dom_();
+    OrdCT<Set>::iterator itdom2 = dom2.begin();
+    OrdCT<LMap> lm2 = pw2.lmap_();
+    OrdCT<LMap>::iterator itlm2 = lm2.begin(); 
+
+    Set auxdom = *itdom2;
+    LMap auxlm = *itlm2;
+
+    PWLMap map1;
+    map1.addSetLM(auxdom, auxlm);
+ 
+    res = minAdjCompMap(map1, pw1);
+
+    PWLMap minAdj;
+    PWLMap minM;
+    while(itdom2 != dom2.end()){
+      PWLMap mapi;
+      mapi.addSetLM(*itdom2, *itlm2);
+      minAdj = minAdjCompMap(mapi, pw1);
+      minM = minMap(res, minAdj);
+
+      res = minAdj.combine(res);
+
+      if(!minM.empty())
+        res = minM.combine(res);
+
+      ++itdom2;
+      ++itlm2;
+    }
+  }
+
+  return res;
 }
 
 
