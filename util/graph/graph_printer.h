@@ -22,14 +22,12 @@
 #include <sstream>
 
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/icl/interval_set.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include<ast/ast_types.h>
 #include<util/graph/graph_definition.h>
 
 using namespace std;
-using namespace boost::icl;
 
 #define MAKE_SPACE for(int __i=0; __i<depth; __i++) stri << " ";
 #define TAB_SPACE 2
@@ -39,7 +37,7 @@ using namespace boost::icl;
 namespace Graph{
  class GraphPrinter{
   public:
-  GraphPrinter(const SetBasedGraph &g, const int mod) 
+  GraphPrinter(const SBGraph &g, const int mod) 
    : graph(g), mode(mod){};
 
   void printGraph(std::string name){
@@ -84,7 +82,7 @@ namespace Graph{
   };
 
   private:
-  const SetBasedGraph &graph;
+  const SBGraph &graph;
   const int mode;
 
   void printVertices(stringstream &stri){
@@ -96,7 +94,7 @@ namespace Graph{
     case 3: // Compacted
      break;
     default:
-     typename boost::graph_traits<SetBasedGraph>::vertex_iterator vi, vi_end;
+     VertexIt vi, vi_end;
      for(boost::tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi){
       stri << vPrinter(graph[*vi]) << " [label=\"" << vPrinter(graph[*vi]) << "\"]";
      }
@@ -112,7 +110,7 @@ namespace Graph{
     case 3: // Compacted
      break;
     default:
-     typename boost::graph_traits<SetBasedGraph>::edge_iterator ei, ei_end;
+     EdgeIt ei, ei_end;
      for(boost::tie(ei, ei_end) = boost::edges(graph); ei != ei_end; ++ei){
       SetVertexDesc v1 = boost::source(*ei, graph);
       SetVertexDesc v2 = boost::target(*ei, graph);
@@ -122,7 +120,7 @@ namespace Graph{
   };
 
   std::string vPrinter(SetVertex v){
-   return v.name();
+   return v.name;
   };
  };
 } // namespace Graph

@@ -1,8 +1,5 @@
 all: util/graph/graph 
-SRC_GRAPH := util/graph/main.cpp \
-	ast/equation.cpp \
-    util/debug.cpp \
-    util/graph/graph_definition.cpp 
+SRC_GRAPH := util/debug.cpp 
 
 OBJS_GRAPH= $(SRC_GRAPH:.cpp=.o)
 -include $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRC_GRAPH)))

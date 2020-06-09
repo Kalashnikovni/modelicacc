@@ -46,8 +46,6 @@
 #include <boost/optional/optional.hpp>
 #include <boost/unordered_set.hpp>
 
-#include <ast/ast_types.h>
-#include <ast/equation.h>
 #include <util/debug.h>
 #include <util/table.h>
 
@@ -2318,7 +2316,7 @@ PWLMap minAtomPW(AtomSet &dom, LMap &lm1, LMap &lm2){
         return auxRes;
       }
  
-      else if(*ito1 != *ito2){
+      else /*if(*ito1 != *ito2)*/{
         if(*ito2 < *ito1)
           lmAux = lm2;  
              
@@ -2326,7 +2324,7 @@ PWLMap minAtomPW(AtomSet &dom, LMap &lm1, LMap &lm2){
         sAux.addAtomSet(asAux);
         domRes.insert(domRes.begin(), sAux);
         lmRes.insert(lmRes.begin(), lmAux);
-
+ 
         PWLMap auxRes(domRes, lmRes);
         return auxRes;
       }
@@ -2431,7 +2429,7 @@ PWLMap minMap(PWLMap &pw1, PWLMap &pw2){
         if(!dom.empty()){
           PWLMap aux = minPW(dom, *itl1, *itl2);
 
-          if(aux.empty())
+          if(res.empty())
             res = aux;
 
           else
@@ -2624,60 +2622,63 @@ PWLMap reduceMapN(PWLMap pw, int dim){
 }
 
 PWLMap mapInf(PWLMap pw){
-  PWLMap res = reduceMapN(pw, 1);
+  PWLMap res;
+  if(!pw.empty()){
+    res = reduceMapN(pw, 1);
 
-  for(int i = 2; i <= res.ndim_(); ++i)
-    res = reduceMapN(res, i); 
+    for(int i = 2; i <= res.ndim_(); ++i)
+      res = reduceMapN(res, i); 
 
-  int maxit = 0;
+    int maxit = 0;
 
-  OrdCT<Set> doms = res.dom_();
-  OrdCT<Set>::iterator itdoms = doms.begin();
-  BOOST_FOREACH(LMap lm, res.lmap_()){
-    OrdCT<NI2> o = lm.off_();
-    OrdCT<NI2>::iterator ito = o.begin();
+    OrdCT<Set> doms = res.dom_();
+    OrdCT<Set>::iterator itdoms = doms.begin();
+    BOOST_FOREACH(LMap lm, res.lmap_()){
+      OrdCT<NI2> o = lm.off_();
+      OrdCT<NI2>::iterator ito = o.begin();
 
-    NI2 a = 0;
-    NI2 b = *(lm.gain_().begin());
+      NI2 a = 0;
+      NI2 b = *(lm.gain_().begin());
 
-    BOOST_FOREACH(NI2 gi, lm.gain_()){
-      a = max(a, gi * abs(*ito));
-      b = min(b, gi);
+      BOOST_FOREACH(NI2 gi, lm.gain_()){
+        a = max(a, gi * abs(*ito));
+        b = min(b, gi);
 
-      ++ito; 
-    }
-
-    ito = o.begin();
-    NI2 its = 0;
-    if(a > 0){
-      BOOST_FOREACH(AtomSet as, (*itdoms).asets_()){
-        MultiInterval mi = as.aset_();
-        OrdCT<Interval> inters = mi.inters_();
-        OrdCT<Interval>::iterator itints = inters.begin();
-
-        BOOST_FOREACH(NI2 gi, lm.gain_()){
-          if(*ito < 0 && gi == 1)
-            its = max(its, ceil(((*itints).hi_() - (*itints).lo_()) / abs(*ito)));
-
-          ++itints;
-        }
-
-        ++ito;
+        ++ito; 
       }
 
-      maxit += its;
+      ito = o.begin();
+      NI2 its = 0;
+      if(a > 0){
+        BOOST_FOREACH(AtomSet as, (*itdoms).asets_()){
+          MultiInterval mi = as.aset_();
+          OrdCT<Interval> inters = mi.inters_();
+          OrdCT<Interval>::iterator itints = inters.begin();
+
+          BOOST_FOREACH(NI2 gi, lm.gain_()){
+            if(*ito < 0 && gi == 1)
+              its = max(its, ceil(((*itints).hi_() - (*itints).lo_()) / abs(*ito)));
+
+            ++itints;
+          }
+
+          ++ito;
+        }
+
+        maxit += its;
+      }
+
+      else if(b == 0)
+        ++maxit;
+
+      ++itdoms;
     }
 
-    else if(b == 0)
-      ++maxit;
+    maxit = floor(log2(maxit)) + 1; 
 
-    ++itdoms;
+    for(int j = 0; j < maxit; ++j)
+      res = res.compPW(res);
   }
-
-  maxit = floor(log2(maxit)) + 1; 
-
-  for(int j = 0; j < maxit; ++j)
-    res = res.compPW(res);
 
   return res;
 }
@@ -2851,85 +2852,145 @@ PWLMap minAdjMap(PWLMap pw2, PWLMap pw1){
 // Graph definition
 /*-----------------------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------------------*/
-/*
+
 struct SetVertex{
-  SetVertex(){};
-  SetVertex(string nm, Set v); 
-  SetVertex(string nm, int i, Set v, int ind); 
+  SetVertex(){
+    name = "";
+    id = -1;
+    Set aux;
+    vs = aux;
+    index = 0;
+  };
+  SetVertex(string n, Set v){
+    name = n;
+    id = -1;
+    vs = v;
+    index = 0;
+  }; 
+  SetVertex(string n, int i, Set v, int ind){
+    name = n;
+    id = i;
+    vs = v;
+    index = ind;
+  }; 
 
-  member_(string, name);
-  member_(int, id);
-  member_(Set, vs);
-  member_(int, index);
+  Set vs_(){
+    return vs;
+  }
 
-  printable(SetVertex);
-  comparable(SetVertex);
+  // For pretty-printing
+  string name;
+
+  private:
+  // Unique identifier
+  int id;
+  // Set vertex
+  Set vs;
+  // For debugging
+  int index;
 };
 
 struct SetEdge{
-  SetEdge(){};
-  SetEdge(string nm, LMap e1, LMap e2);
-  SetEdge(string nm, int i, LMap e1, LMap e2, int ind);
+  SetEdge(){
+    name = "";
+    id = -1;
+    PWLMap aux;
+    es1 = aux;
+    es2 = aux;
+    index = 0;
+  };
+  SetEdge(string nm, int i, PWLMap e1, PWLMap e2, int ind){
+    name = nm;
+    id = i;
+    es1 = e1;
+    es2 = e2;
+    index = ind;
+  };
 
-  member_(string, name);
-  member_(int, id);
-  member_(LMap, es1);
-  member_(LMap, es2);
-  member_(int, index);
+  PWLMap es1_(){
+    return es1;
+  }
 
-  printable(SetEdge);
-  comparable(SetEdge);
+  PWLMap es2_(){
+    return es2;
+  }
+
+  string name;
+
+  private:
+  int id;
+  PWLMap es1;
+  PWLMap es2;
+  int index;
 };
 
-member_imp(SetVertex, string, name);
-member_imp(SetVertex, int, id);
-member_imp(SetVertex, Set, vs);
-member_imp(SetVertex, int, index);
-
-SetVertex::SetVertex(string nm, Set v) : name_(nm), vs_(v){
-  set_id(-1);
-  set_index(-1);
-}
-
-SetVertex::SetVertex(string nm, int i, Set v, int ind) : name_(nm), id_(i), vs_(v), index_(ind){}
-
-ostream &operator<<(ostream &out, SetVertex &sv){
-  out << sv.name();
-
-  return out;
-}
-
-bool SetVertex::operator==(const SetVertex &other) const {
-  return (id() == other.id()); 
-}
-
-member_imp(SetEdge, string, name);
-member_imp(SetEdge, int, id);
-member_imp(SetEdge, LMap, es1);
-member_imp(SetEdge, LMap, es2);
-member_imp(SetEdge, int, index);
-
-SetEdge::SetEdge(string nm, LMap e1, LMap e2) : name_(nm), es1_(e1), es2_(e2){
-  set_id(-1);
-  set_index(-1);
-}
-SetEdge::SetEdge(string nm, int i, LMap e1, LMap e2, int ind) 
-  : name_(nm), id_(i), es1_(e1), es2_(e2), index_(ind){}
-
-ostream &operator<<(ostream &out, SetEdge &se){
-  out << se.name();
-
-  return out;
-}
-
-bool SetEdge::operator==(const SetEdge &other) const {
-  return (id() == other.id()); 
-}
-
 typedef boost::adjacency_list<boost::listS, boost::listS, boost::undirectedS, SetVertex, SetEdge>
- SetBasedGraph;
-typedef SetBasedGraph::vertex_descriptor SetVertexDesc;
-typedef SetBasedGraph::edge_descriptor SetEdgeDesc;
-*/
+ SBGraph;
+typedef SBGraph::vertex_descriptor SetVertexDesc;
+typedef boost::graph_traits<SBGraph>::vertex_iterator VertexIt;
+typedef SBGraph::edge_descriptor SetEdgeDesc;
+typedef boost::graph_traits<SBGraph>::edge_iterator EdgeIt;
+
+PWLMap connectedComponents(SBGraph g){
+  PWLMap res;
+
+  VertexIt vi_start, vi_end;
+  boost::tie(vi_start, vi_end) = vertices(g);
+  EdgeIt ei_start, ei_end;
+  boost::tie(ei_start, ei_end) = edges(g);
+
+  if(vi_start != vi_end && ei_start != ei_end){
+    Set vss;
+    while(vi_start != vi_end){
+      Set aux = (g[*vi_start]).vs_();
+      vss = vss.cup(aux);
+
+      ++vi_start;
+    }
+
+    PWLMap auxres(vss); 
+    res = auxres;
+
+    PWLMap emap1 = (g[*ei_start]).es1_();
+    PWLMap emap2 = (g[*ei_start]).es2_();
+    ++ei_start;
+
+    while(ei_start != ei_end){
+      emap1 = (g[*ei_start]).es1_().combine(emap1); 
+      emap2 = (g[*ei_start]).es2_().combine(emap2); 
+
+      ++ei_start;
+    }
+
+    Set lastIm;
+    Set newIm = vss;
+    Set diffIm = vss;
+
+    while(!diffIm.empty()){
+      PWLMap ermap1 = res.compPW(emap1);
+      PWLMap ermap2 = res.compPW(emap2);
+
+      PWLMap rmap1 = minAdjMap(ermap1, ermap2);
+      PWLMap rmap2 = minAdjMap(ermap2, ermap1);
+      rmap1 = rmap1.combine(res);
+      rmap2 = rmap2.combine(res);
+
+      PWLMap newRes = minMap(rmap1, rmap2);
+ 
+      lastIm = newIm;
+      newIm = newRes.image(vss);
+      diffIm = lastIm.diff(newIm);
+
+      if(!diffIm.empty()){
+        res = newRes;
+        res = mapInf(res);
+        newIm = res.image(vss);
+      }
+    }
+  }
+
+  return res;
+}
+
 #endif
 
