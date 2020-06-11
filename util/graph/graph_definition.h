@@ -113,7 +113,7 @@ struct IntervalImp1{
       }
 
       else{
-        WARNING("Wrong values for subscript (check low <= hi)");
+        //WARNING("Wrong values for subscript (check low <= hi)");
         empty = true;
       }
     }
@@ -126,7 +126,7 @@ struct IntervalImp1{
     }
 
     else{ 
-      WARNING("Subscripts should be positive");
+      //WARNING("Subscripts should be positive");
       lo = -1;
       step = -1;
       hi = -1;
@@ -360,7 +360,7 @@ struct MultiInterImp1{
     } 
  
     if(areEmptys){
-      WARNING("Empty dimension"); 
+      //WARNING("Empty dimension"); 
 
       CT1<IntervalImp> aux;
       inters = aux;
@@ -382,10 +382,10 @@ struct MultiInterImp1{
   }
 
   void addInter(IntervalImp i){
-    if(i.empty_())
-      WARNING("Empty dimension");
+    //if(i.empty_())
+      //WARNING("Empty dimension");
 
-    else{
+    if(!i.empty_()){
       inters.insert(inters.end(), i);
       ++ndim;
     }
@@ -909,7 +909,7 @@ struct SetImp1{
       }
     
       else{
-        WARNING("Using atomics sets of different sizes");
+        //WARNING("Using atomics sets of different sizes");
 
         SetType aux3;
         asets = aux3;
@@ -956,8 +956,8 @@ struct SetImp1{
       ndim = aset2.ndim_();
     }
  
-    else
-      WARNING("Atomic sets should have the same dimension");
+    //else
+      //WARNING("Atomic sets should have the same dimension");
   }
 
   void addAtomSets(SetType &sets2){
@@ -1028,10 +1028,11 @@ struct SetImp1{
   }
 
   SetImp1 cup(SetImp1 &set2){
-    SetImp1 res;
-  
-    res.addAtomSets(asets);
-    res.addAtomSets(set2.asets);
+    SetImp1 res = *this;
+    SetImp1 aux = set2.diff(*this);
+ 
+    if(!aux.empty()) 
+      res.addAtomSets(aux.asets);
 
     return res;
   }
@@ -1236,7 +1237,7 @@ struct LMapImp1{
       }
 
       else{
-        WARNING("Offset and gain should be of the same size");
+        //WARNING("Offset and gain should be of the same size");
 
         CTNum aux1;
         CTNum aux2;
@@ -1247,7 +1248,7 @@ struct LMapImp1{
     }
 
     else{
-      WARNING("All gains should be positive");
+      //WARNING("All gains should be positive");
 
       CTNum aux1;
       CTNum aux2;
@@ -1301,8 +1302,8 @@ struct LMapImp1{
       ++ndim;
     }
 
-    else
-      WARNING("Gain should be positive");
+    //else
+      //WARNING("Gain should be positive");
   }
 
   LMapImp1 compose(LMapImp1 &lm2){
@@ -1329,7 +1330,7 @@ struct LMapImp1{
     }
 
     else{
-      WARNING("Linear maps should be of the same size");
+      //WARNING("Linear maps should be of the same size");
       LMapImp1 aux;
       return aux;
     }
@@ -1446,7 +1447,7 @@ struct PWAtomLMapImp1{
     LMapImp aux2;
 
     if(d.ndim_() != l.ndim_()){
-      WARNING("Atomic set and map should be of the same dimension");
+      //WARNING("Atomic set and map should be of the same dimension");
 
       dom = aux1;
       lmap = aux2;
@@ -1470,17 +1471,17 @@ struct PWAtomLMapImp1{
 
         if(*itg < Inf){
           if(auxLo != (int) auxLo && i.lo_()){
-            WARNING("Incompatible map");
+            //WARNING("Incompatible map");
             incompatible = true;
           }
 
           if(auxStep != (int) auxStep && i.step_()){
-            WARNING("Incompatible map");
+            //WARNING("Incompatible map");
             incompatible = true;
           }
 
           if(auxHi != (int) auxHi && i.hi_()){
-            WARNING("Incompatible map");
+            //WARNING("Incompatible map");
             incompatible = true;
           }
 
@@ -1662,7 +1663,7 @@ struct PWLMapImp1{
       }
 
       if(different){
-        WARNING("Sets and maps should have the same dimension");
+        //WARNING("Sets and maps should have the same dimension");
 
         CTSet aux1;
         CTLMap aux2;
@@ -1679,7 +1680,7 @@ struct PWLMapImp1{
     }
 
     else{
-      WARNING("Domain size should be equal to map size");
+      //WARNING("Domain size should be equal to map size");
 
       CTSet aux1;
       CTLMap aux2;
@@ -1864,7 +1865,7 @@ struct PWLMapImp1{
     }
 
     else{
-      WARNING("There should be only one component");
+      //WARNING("There should be only one component");
 
       PWLMapImp1 aux;
       return aux;
@@ -2316,7 +2317,7 @@ PWLMap minAtomPW(AtomSet &dom, LMap &lm1, LMap &lm2){
         return auxRes;
       }
  
-      else /*if(*ito1 != *ito2)*/{
+      else if(*ito1 != *ito2){
         if(*ito2 < *ito1)
           lmAux = lm2;  
              
@@ -2337,7 +2338,11 @@ PWLMap minAtomPW(AtomSet &dom, LMap &lm1, LMap &lm2){
     }
   }
 
-  PWLMap auxRes;
+  Set sAux;
+  sAux.addAtomSet(dom);
+  domRes.insert(domRes.begin(), sAux);
+  lmRes.insert(lmRes.begin(), lm1);
+  PWLMap auxRes(domRes, lmRes);
   return auxRes;
 }
 
@@ -2486,6 +2491,7 @@ PWLMap reduceMapN(PWLMap pw, int dim){
 
         NI1 loint = (*itints).lo_();
         NI1 hiint = (*itints).hi_();
+
         if((hiint - loint) > (off * off)){
           OrdCT<Set> news;
           OrdCT<Set>::iterator itnews = news.begin();
@@ -2502,7 +2508,6 @@ PWLMap reduceMapN(PWLMap pw, int dim){
             OrdCT<NI2>::iterator itreso = reso.begin();
 
             int count3 = 1; 
-
             BOOST_FOREACH(NI2 gi, (*itlm).gain_()){
               if(count3 == dim){
                 itresg = resg.insert(itresg, 0);
@@ -2543,40 +2548,52 @@ PWLMap reduceMapN(PWLMap pw, int dim){
           Set newdomi(auxnewd);
 
           if(newdomi.empty()){
+            itlres = lres.begin();
+
             if(i < sres.size()){
-              OrdCT<LMap> auxl = lres;
+              OrdCT<Set> auxs;
+              OrdCT<Set>::iterator itauxs = auxs.begin();
+              OrdCT<LMap> auxl;
               OrdCT<LMap>::iterator itauxl = auxl.begin();
 
               unsigned int count4 = 1;
               BOOST_FOREACH(Set si, sres){
                 if(count4 != i){
-                  itsres = sres.insert(itsres, si);
-                  ++itsres;
-                  itlres = lres.insert(itlres, *itauxl);
-                  ++itlres;
+                  itauxs = auxs.insert(itauxs, si);
+                  ++itauxs;
+                  itauxl = auxl.insert(itauxl, *itlres);
+                  ++itauxl;
                 }
 
-                ++count4;
-                ++itauxl;
+                ++count4; 
+                ++itlres;
               }
+
+              sres = auxs;
+              lres = auxl;
             }
 
             else{
-              OrdCT<LMap> auxl = lres;
+              OrdCT<Set> auxs;
+              OrdCT<Set>::iterator itauxs = auxs.begin();
+              OrdCT<LMap> auxl;
               OrdCT<LMap>::iterator itauxl = auxl.begin();
 
               unsigned int count4 = 1;
               BOOST_FOREACH(Set si, sres){
                 if(count4 < i){
-                  itsres = sres.insert(itsres, si);
-                  ++itsres;
-                  itlres = lres.insert(itlres, *itauxl);
-                  ++itlres;
+                  itauxs = auxs.insert(itauxs, si);
+                  ++itauxs;
+                  itauxl = auxl.insert(itauxl, *itlres);
+                  ++itauxl;
                 }
 
                 ++count4;
-                ++itauxl;
+                ++itlres;
               }
+
+              sres = auxs;
+              lres = auxl;
             }
           }
 
@@ -2648,22 +2665,47 @@ PWLMap mapInf(PWLMap pw){
       }
 
       ito = o.begin();
-      NI2 its = 0;
       if(a > 0){
+        NI2 its = 0;
+
+        OrdCT<NI2> g = lm.gain_();
+        OrdCT<NI2>::iterator itg = g.begin();
+        for(int dim = 0; dim < res.ndim_(); ++dim){
+          if(*itg == 1 && *ito < 0){
+            BOOST_FOREACH(AtomSet asi, (*itdoms).asets_()){
+              MultiInterval mii = asi.aset_(); 
+              OrdCT<Interval> ii = mii.inters_();
+              OrdCT<Interval>::iterator itii = ii.begin();
+              ito = o.begin();
+ 
+              for(int count = 0; count < dim; ++count){
+                ++itii;
+                ++ito;
+              }
+
+              its = max(its, ceil(((*itii).hi_() - (*itii).lo_()) / abs(*ito)));
+            }
+          }
+ 
+          ++itg;
+        }
+
+        /*
         BOOST_FOREACH(AtomSet as, (*itdoms).asets_()){
           MultiInterval mi = as.aset_();
           OrdCT<Interval> inters = mi.inters_();
           OrdCT<Interval>::iterator itints = inters.begin();
 
           BOOST_FOREACH(NI2 gi, lm.gain_()){
-            if(*ito < 0 && gi == 1)
+            if(*ito < 0 && gi == 1){
               its = max(its, ceil(((*itints).hi_() - (*itints).lo_()) / abs(*ito)));
+            }
 
             ++itints;
           }
 
           ++ito;
-        }
+        }*/
 
         maxit += its;
       }
@@ -2802,8 +2844,8 @@ PWLMap minAdjCompMap(PWLMap pw2, PWLMap pw1){
     }
   }
 
-  else
-    WARNING("There should be only one pair in the map");
+  //else
+    //WARNING("There should be only one pair in the map");
 
   return res;
 }
@@ -2983,7 +3025,9 @@ PWLMap connectedComponents(SBGraph g){
 
       if(!diffIm.empty()){
         res = newRes;
+        //cout << "newres: " << res << "\n";
         res = mapInf(res);
+        //cout << "mapInf: " << res << "\n";
         newIm = res.image(vss);
       }
     }

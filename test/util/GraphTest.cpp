@@ -3856,6 +3856,223 @@ void TestRC1(){
   BOOST_CHECK(true);
 }
 
+void TestGraph3c(){
+  float offsp = 0;
+  float offsn = 1;
+  float offgp = 2;
+  float offrp = 1000;
+  float offrn = 2 * offrp;
+  float offcp = 3 * offrp;
+  float offcn = 4 * offrp;
+
+  Interval i1(1 + offsp, 1, 1 + offsp);
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  AtomSet as1(mi1);
+  Set sp;
+  sp.addAtomSet(as1);
+  SetVertex V1("V1", 1, sp, 0);
+
+  Interval i2(1 + offsn, 1, 1 + offsn);
+  MultiInterval mi2;
+  mi2.addInter(i2);
+  AtomSet as2(mi2);
+  Set sn;
+  sn.addAtomSet(as2);
+  SetVertex V2("V2", 2, sn, 0);
+
+  Interval i3(1 + offgp, 1, 1 + offgp);
+  MultiInterval mi3;
+  mi3.addInter(i3);
+  AtomSet as3(mi3);
+  Set gp;
+  gp.addAtomSet(as3);
+  SetVertex V3("V3", 3, gp, 0);
+
+  Interval i4(1 + offrp, 1, offrp + offrp);
+  MultiInterval mi4;
+  mi4.addInter(i4);
+  AtomSet as4(mi4);
+  Set rp;
+  rp.addAtomSet(as4);
+  SetVertex V4("V4", 4, rp, 0);
+
+  Interval i5(1 + offrn, 1, offrp + offrn);
+  MultiInterval mi5;
+  mi5.addInter(i5);
+  AtomSet as5(mi5);
+  Set rn;
+  rn.addAtomSet(as5);
+  SetVertex V5("V5", 5, rn, 0);
+
+  Interval i6(1 + offcp, 1, offrp + offcp);
+  MultiInterval mi6;
+  mi6.addInter(i6);
+  AtomSet as6(mi6);
+  Set cp;
+  cp.addAtomSet(as6);
+  SetVertex V6("V6", 6, cp, 0);
+
+  Interval i7(1 + offcn, 1, offrp + offcn);
+  MultiInterval mi7;
+  mi7.addInter(i7);
+  AtomSet as7(mi7);
+  Set cn;
+  cn.addAtomSet(as7);
+  SetVertex V7("V7", 7, cn, 0);
+
+  float offE1 = 0;
+  float offE2 = 1;
+  float offE3 = 2;
+  float offE4 = 2 + offrp;
+  float offE5 = 2 + 2 * offrp - 1;
+  float offE6 = 2 + 2 * offrp;
+
+  Interval i8(1 + offE1, 1, offE2);
+  MultiInterval mi8;
+  mi8.addInter(i8);
+  AtomSet as8(mi8);
+  Set domE1;
+  domE1.addAtomSet(as8);
+  LMap lm1;
+  lm1.addGO(0, 1 + offsp);
+  LMap lm2;
+  lm2.addGO(0, 1 + offrp);
+  PWLMap mapE1sp;
+  mapE1sp.addSetLM(domE1, lm1);
+  PWLMap mapE1rp;
+  mapE1rp.addSetLM(domE1, lm2);
+  SetEdge E1("E1", 1, mapE1sp, mapE1rp, 0);
+
+  Interval i9(1 + offE2, 1, offE3);
+  MultiInterval mi9;
+  mi9.addInter(i9);
+  AtomSet as9(mi9);
+  Set domE2;
+  domE2.addAtomSet(as9);
+  LMap lm3;
+  lm3.addGO(0, 1 + offsn);
+  LMap lm4;
+  lm4.addGO(0, 1 + offgp);
+  PWLMap mapE2sn;
+  mapE2sn.addSetLM(domE2, lm3);
+  PWLMap mapE2gp;
+  mapE2gp.addSetLM(domE2, lm4);
+  SetEdge E2("E2", 2, mapE2sn, mapE2gp, 0);
+
+  Interval i10(1 + offE3, 1, offE4);
+  MultiInterval mi10;
+  mi10.addInter(i10);
+  AtomSet as10(mi10);
+  Set domE3;
+  domE3.addAtomSet(as10);
+  LMap lm5;
+  lm5.addGO(1, offrn - offE3); 
+  LMap lm6;
+  lm6.addGO(1, offcp - offE3);
+  PWLMap mapE3rn;
+  mapE3rn.addSetLM(domE3, lm5);
+  PWLMap mapE3cp;
+  mapE3cp.addSetLM(domE3, lm6);
+  SetEdge E3("E3", 3, mapE3rn, mapE3cp, 0);
+
+  Interval i11(1 + offE4, 1, offE5);
+  MultiInterval mi11;
+  mi11.addInter(i11);
+  AtomSet as11(mi11);
+  Set domE4;
+  domE4.addAtomSet(as11);
+  LMap lm7;
+  lm7.addGO(1, offrn - offE4);
+  LMap lm8;
+  lm8.addGO(1, 1 + offrp - offE4);
+  PWLMap mapE4rn;
+  mapE4rn.addSetLM(domE4, lm7);
+  PWLMap mapE4rp;
+  mapE4rp.addSetLM(domE4, lm8);
+  SetEdge E4("E4", 4, mapE4rn, mapE4rp, 0);
+
+  Interval i12(1 + offE5, 1, offE6);
+  MultiInterval mi12;
+  mi12.addInter(i12);
+  AtomSet as12(mi12);
+  Set domE5;
+  domE5.addAtomSet(as12);
+  LMap lm9;
+  lm9.addGO(1, offcn - offE5);
+  LMap lm10;
+  lm10.addGO(0, 1 + offgp);
+  PWLMap mapE5cn;
+  mapE5cn.addSetLM(domE5, lm9);
+  PWLMap mapE5gp;
+  mapE5gp.addSetLM(domE5, lm10);
+  SetEdge E5("E5", 1, mapE5cn, mapE5gp, 0);
+
+  Interval i13(1 + offE6, 1, 1 + offE6 + offrp - 2);
+  MultiInterval mi13;
+  mi13.addInter(i13);
+  AtomSet as13(mi13);
+  Set domE6;
+  domE6.addAtomSet(as13);
+  LMap lm11;
+  lm11.addGO(1, offcn - offE6);
+  LMap lm12;
+  lm12.addGO(1, offcn - offE6 + 1);
+  PWLMap mapE6cn;
+  mapE6cn.addSetLM(domE6, lm11);
+  PWLMap mapE6cn2;
+  mapE6cn2.addSetLM(domE6, lm12); 
+  SetEdge E6("E6", 1, mapE6cn, mapE6cn2, 0);
+
+  SBGraph g;
+
+  SetVertexDesc v1 = boost::add_vertex(g);
+  SetVertexDesc v2 = boost::add_vertex(g);
+  SetVertexDesc v3 = boost::add_vertex(g);
+  SetVertexDesc v4 = boost::add_vertex(g);
+  SetVertexDesc v5 = boost::add_vertex(g);
+  SetVertexDesc v6 = boost::add_vertex(g);
+  SetVertexDesc v7 = boost::add_vertex(g);
+
+  g[v1] = V1;
+  g[v2] = V2;
+  g[v3] = V3;
+  g[v4] = V4;
+  g[v5] = V5;
+  g[v6] = V6;
+  g[v7] = V7;
+
+  SetEdgeDesc e1;
+  bool b1;
+  boost::tie(e1, b1) = boost::add_edge(v1, v4, g);
+  SetEdgeDesc e2; 
+  bool b2;
+  boost::tie(e2, b2) = boost::add_edge(v2, v3, g);
+  SetEdgeDesc e3;
+  bool b3;
+  boost::tie(e3, b3) = boost::add_edge(v5, v6, g);
+  SetEdgeDesc e4;
+  bool b4;
+  boost::tie(e4, b4) = boost::add_edge(v5, v4, g);
+  SetEdgeDesc e5;
+  bool b5;
+  boost::tie(e5, b5) = boost::add_edge(v7, v3, g);
+  SetEdgeDesc e6;
+  bool b6;
+  boost::tie(e6, b6) = boost::add_edge(v7, v7, g);
+
+  g[e1] = E1;
+  g[e2] = E2;
+  g[e3] = E3;
+  g[e4] = E4;
+  g[e5] = E5;
+  g[e6] = E6;
+
+  PWLMap res1 = connectedComponents(g);
+  cout << "res1: " << res1 << "\n";
+
+  BOOST_CHECK(true); 
+}
 //____________________________________________________________________________//
 
 test_suite *init_unit_test_suite(int, char *[]){
@@ -3956,6 +4173,7 @@ test_suite *init_unit_test_suite(int, char *[]){
 
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAtomPW1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAtomPW2));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAtomPW3));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinPW1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinPW2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinMap1));
@@ -3969,9 +4187,9 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAdjComp4));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAdj1));
 
-*/
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestRC1));
-//  framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAtomPW3));
+*/
+  framework::master_test_suite().add(BOOST_TEST_CASE(&TestGraph3c));
 
   return 0;
 }
