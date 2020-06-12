@@ -3650,8 +3650,8 @@ void TestMinAdj1(){
 
   PWLMap res2;
   res2.addSetLM(s5, lm5);
-  res2.addSetLM(s6, lm3);
   res2.addSetLM(s7, lm4);
+  res2.addSetLM(s6, lm3);
 
   BOOST_CHECK(res1 == res2);
 }
@@ -4073,12 +4073,284 @@ void TestGraph3c(){
 
   BOOST_CHECK(true); 
 }
+
+void Test2D(){
+  float offsp1 = 0;
+  float offsn1 = 1;
+  float offgp1 = 2;
+  float offcl1 = 1000;
+  float offcr1 = 2 * offcl1;
+  float offcu1 = 3 * offcl1;
+  float offcd1 = 4 * offcl1;
+
+  float offsp2 = 0;
+  float offsn2 = 1;
+  float offgp2 = 2;
+  float offcl2 = 100;
+  float offcr2 = 2 * offcl2;
+  float offcu2 = 3 * offcl2;
+  float offcd2 = 4 * offcl2;
+
+  Interval i1(1 + offsp1, 1, 1 + offsp1);
+  Interval i2(1 + offsp2, 1, 1 + offsp2);
+  MultiInterval mi1;
+  mi1.addInter(i1);
+  mi1.addInter(i2);
+  AtomSet as1(mi1);
+  Set sp;
+  sp.addAtomSet(as1);
+  SetVertex V1("V1", 1, sp, 0);
+ 
+  Interval i3(1 + offsn1, 1, 1 + offsn1);
+  Interval i4(1 + offsn2, 1, 1 + offsn2);
+  MultiInterval mi2;
+  mi2.addInter(i3);
+  mi2.addInter(i4);
+  AtomSet as2(mi2);
+  Set sn;
+  sn.addAtomSet(as2);
+  SetVertex V2("V2", 2, sn, 0);
+
+  Interval i5(1 + offgp1, 1, 1 + offgp1);
+  Interval i6(1 + offgp2, 1, 1 + offgp2);
+  MultiInterval mi3;
+  mi3.addInter(i5);
+  mi3.addInter(i6);
+  AtomSet as3(mi3);
+  Set gp;
+  gp.addAtomSet(as3);
+  SetVertex V3("V3", 3, gp, 0);
+
+  Interval i7(1 + offcl1, 1, offcr1);
+  Interval i8(1 + offcl2, 1, offcr2);
+  MultiInterval mi4;
+  mi4.addInter(i7);
+  mi4.addInter(i8);
+  AtomSet as4(mi4);
+  Set cl;
+  cl.addAtomSet(as4);
+  SetVertex V4("V4", 4, cl, 0);
+
+  Interval i9(1 + offcr1, 1, offcu1);
+  Interval i10(1 + offcr2, 1, offcu2);
+  MultiInterval mi5;
+  mi5.addInter(i9);
+  mi5.addInter(i10);
+  AtomSet as5(mi5);
+  Set cr;
+  cr.addAtomSet(as5);
+  SetVertex V5("V5", 5, cr, 0);
+
+  Interval i11(1 + offcu1, 1, offcd1); 
+  Interval i12(1 + offcu2, 1, offcd2);
+  MultiInterval mi6;
+  mi6.addInter(i11);
+  mi6.addInter(i12);
+  AtomSet as6(mi6);
+  Set cu;
+  cu.addAtomSet(as6);
+  SetVertex V6("V6", 6, cu, 0);
+
+  Interval i13(1 + offcd1, 1, offcl1 + offcd1);
+  Interval i14(1 + offcd2, 1, offcl2 + offcd2);
+  MultiInterval mi7;
+  mi7.addInter(i13);
+  mi7.addInter(i14);
+  AtomSet as7(mi7);
+  Set cd;
+  cd.addAtomSet(as7);
+  SetVertex V7("V7", 7, cd, 0);
+
+  float offE11 = 0;
+  float offE12 = 0;
+  float offE21 = offE11 + offcl1;
+  float offE22 = offE12 + offcl2 - 1;
+  float offE31 = offE21 + offcl1 - 1;
+  float offE32 = offE22 + offcl2;
+  float offE41 = offE31 + offcl1;
+  float offE42 = offE32 + 1;
+  float offE51 = offE41 + 1; 
+  float offE52 = offE42 + offcl2;
+  float offE61 = offE51 + 1;
+  float offE62 = offE52 + offcl2;
+  float offE71 = offE61 + 1;
+  float offE72 = offE62 + 1;
+
+  Interval i15(1 + offE11, 1, offE21);
+  Interval i16(1 + offE12, 1, offE22);
+  MultiInterval mi8;
+  mi8.addInter(i15);
+  mi8.addInter(i16);
+  AtomSet as8(mi8);
+  Set domE1;
+  domE1.addAtomSet(as8);
+  LMap lm1;
+  lm1.addGO(1, offcl1 - offE11);
+  lm1.addGO(1, offcl2 - offE12 + 1);
+  LMap lm2;
+  lm2.addGO(1, offcr1 - offE11);
+  lm2.addGO(1, offcr2 - offE12);
+  PWLMap mapE1cl;
+  mapE1cl.addSetLM(domE1, lm1);
+  PWLMap mapE1cr;
+  mapE1cr.addSetLM(domE1, lm2);
+  SetEdge E1("E1", 1, mapE1cl, mapE1cr, 0);
+
+  Interval i17(1 + offE21, 1, offE31);
+  Interval i18(1 + offE22, 1, offE32);
+  MultiInterval mi9;
+  mi9.addInter(i17);
+  mi9.addInter(i18);
+  AtomSet as9(mi9);
+  Set domE2;
+  domE2.addAtomSet(as9);
+  LMap lm3;
+  lm3.addGO(1, offcu1 - offE21 + 1);
+  lm3.addGO(1, offcu2 - offE22);
+  LMap lm4;
+  lm4.addGO(1, offcd1 - offE21);
+  lm4.addGO(1, offcd2 - offE22);
+  PWLMap mapE2cu;
+  mapE2cu.addSetLM(domE2, lm3);
+  PWLMap mapE2cd;
+  mapE2cd.addSetLM(domE2, lm4); 
+  SetEdge E2("E2", 2, mapE2cu, mapE2cd, 0);
+
+  Interval i19(1 + offE31, 1, offE41);
+  Interval i20(1 + offE32, 1, offE42); 
+  MultiInterval mi10;
+  mi10.addInter(i19);
+  mi10.addInter(i20);
+  AtomSet as10(mi10);
+  Set domE3;
+  domE3.addAtomSet(as10);
+  LMap lm5;
+  lm5.addGO(1, offcl1 - offE31);
+  lm5.addGO(1, offcl2 - offE32);
+  LMap lm6;
+  lm6.addGO(1, offcr1 - offE31);
+  lm6.addGO(1, offcr2 - offE32 + offcl2 - 1);
+  PWLMap mapE3cl;
+  mapE3cl.addSetLM(domE3, lm5);
+  PWLMap mapE3cr;
+  mapE3cr.addSetLM(domE3, lm6);
+  SetEdge E3("E3", 3, mapE3cl, mapE3cr, 0);
+
+  Interval i21(1 + offE41, 1, offE51);
+  Interval i22(1 + offE42, 1, offE52);
+  MultiInterval mi11;
+  mi11.addInter(i21);
+  mi11.addInter(i22);
+  AtomSet as11(mi11);
+  Set domE4;
+  domE4.addAtomSet(as11);
+  LMap lm7;
+  lm7.addGO(1, offcu1 - offE41);
+  lm7.addGO(1, offcu2 - offE42);
+  LMap lm8;
+  lm8.addGO(0, offsp1 + 1);
+  lm8.addGO(0, offsp2 + 1);
+  PWLMap mapE4cu;
+  mapE4cu.addSetLM(domE4, lm7);
+  PWLMap mapE4sp;
+  mapE4sp.addSetLM(domE4, lm8);
+  SetEdge E4("E4", 4, mapE4cu, mapE4sp, 0);
+
+  Interval i23(1 + offE51, 1, offE61);
+  Interval i24(1 + offE52, 1, offE62);
+  MultiInterval mi12;
+  mi12.addInter(i23);
+  mi12.addInter(i24);
+  AtomSet as12(mi12);
+  Set domE5;
+  domE5.addAtomSet(as12);
+  LMap lm9;
+  lm9.addGO(1, offcd1 - offE51 + offcl1 - 1);
+  lm9.addGO(1, offcd2 - offE52);
+  LMap lm10;
+  lm10.addGO(0, offgp1 + 1);
+  lm10.addGO(0, offgp2 + 1);
+  PWLMap mapE5cd;
+  mapE5cd.addSetLM(domE5, lm9);
+  PWLMap mapE5gp;
+  mapE5gp.addSetLM(domE5, lm10);
+  SetEdge E5("E5", 5, mapE5cd, mapE5gp, 0);
+ 
+  Interval i25(1 + offE61, 1, offE71);
+  Interval i26(1 + offE62, 1, offE72);
+  MultiInterval mi13;
+  mi13.addInter(i25);
+  mi13.addInter(i26);
+  AtomSet as13(mi13);
+  Set domE6;
+  domE6.addAtomSet(as13);
+  LMap lm11;
+  lm11.addGO(0, offsn1 + 1);
+  lm11.addGO(0, offsn2 + 1);
+  LMap lm12;
+  lm12.addGO(0, offgp1 + 1);
+  lm12.addGO(0, offgp2 + 1);
+  PWLMap mapE6sn;
+  mapE6sn.addSetLM(domE6, lm11);
+  PWLMap mapE6gp;
+  mapE6gp.addSetLM(domE6, lm12);
+  SetEdge E6("E6", 6, mapE6sn, mapE6gp, 0); 
+
+  SBGraph g;
+
+  SetVertexDesc v1 = boost::add_vertex(g);
+  SetVertexDesc v2 = boost::add_vertex(g);
+  SetVertexDesc v3 = boost::add_vertex(g);
+  SetVertexDesc v4 = boost::add_vertex(g);
+  SetVertexDesc v5 = boost::add_vertex(g);
+  SetVertexDesc v6 = boost::add_vertex(g);
+  SetVertexDesc v7 = boost::add_vertex(g);
+
+  g[v1] = V1;
+  g[v2] = V2;
+  g[v3] = V3;
+  g[v4] = V4;
+  g[v5] = V5;
+  g[v6] = V6;
+  g[v7] = V7;
+
+  SetEdgeDesc e1;
+  bool b1;
+  boost::tie(e1, b1) = boost::add_edge(v4, v5, g);
+  SetEdgeDesc e2; 
+  bool b2;
+  boost::tie(e2, b2) = boost::add_edge(v6, v7, g);
+  SetEdgeDesc e3;
+  bool b3;
+  boost::tie(e3, b3) = boost::add_edge(v4, v5, g);
+  SetEdgeDesc e4;
+  bool b4;
+  boost::tie(e4, b4) = boost::add_edge(v6, v1, g);
+  SetEdgeDesc e5;
+  bool b5;
+  boost::tie(e5, b5) = boost::add_edge(v7, v3, g);
+  SetEdgeDesc e6;
+  bool b6;
+  boost::tie(e6, b6) = boost::add_edge(v2, v3, g);
+
+  g[e1] = E1;
+  g[e2] = E2;
+  g[e3] = E3;
+  g[e4] = E4;
+  g[e5] = E5;
+  g[e6] = E6;
+
+  PWLMap res1 = connectedComponents(g);
+  cout << "res1: " << res1 << "\n";
+  
+  BOOST_CHECK(true);
+}
+
 //____________________________________________________________________________//
 
 test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().p_name.value = "Set Based Graphs";
 
-/*
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntCreation1));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntCreation2));
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestIntCreation3));
@@ -4188,8 +4460,8 @@ test_suite *init_unit_test_suite(int, char *[]){
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestMinAdj1));
 
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestRC1));
-*/
   framework::master_test_suite().add(BOOST_TEST_CASE(&TestGraph3c));
+  framework::master_test_suite().add(BOOST_TEST_CASE(&Test2D));
 
   return 0;
 }
