@@ -3025,9 +3025,7 @@ PWLMap connectedComponents(SBGraph g){
 
       if(!diffIm.empty()){
         res = newRes;
-        //cout << "newres: " << res << "\n";
         res = mapInf(res);
-        //cout << "mapInf: " << res << "\n";
         newIm = res.image(vss);
       }
     }

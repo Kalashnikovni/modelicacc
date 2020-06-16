@@ -1,12 +1,21 @@
-all: test/util/GraphTest
-SRC_TEST_UTIL := test/util/GraphTest.cpp \
+all: test/util/GraphTest test/util/PrintGraphs
+
+SRC_TEST_UTIL1 := test/util/GraphTest.cpp \
     util/debug.cpp 
 
-OBJS_TEST_UTIL= $(SRC_TEST_UTIL:.cpp=.o)
--include $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRC_TEST_UTIL)))
+SRC_TEST_UTIL2 := test/util/PrintGraphs.cpp
 
-test/util/GraphTest: $(OBJS_TEST_UTIL)
-	$(CXX) $(CXXFLAGS) -o test/util/GraphTest $(OBJS_TEST_UTIL) $(LIB_TEST)
+OBJS_TEST_UTIL1= $(SRC_TEST_UTIL1:.cpp=.o)
+-include $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRC_TEST_UTIL1)))
+
+OBJS_TEST_UTIL2= $(SRC_TEST_UTIL2:.cpp=.o)
+-include $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRC_TEST_UTIL2)))
+
+test/util/GraphTest: $(OBJS_TEST_UTIL1)
+	$(CXX) $(CXXFLAGS) -o test/util/GraphTest $(OBJS_TEST_UTIL1) $(LIB_TEST)
+
+test/util/PrintGraphs: $(OBJS_TEST_UTIL2)
+	$(CXX) $(CXXFLAGS) -o test/util/PrintGraphs $(OBJS_TEST_UTIL2) $(LIB_TEST)
 
 
 
