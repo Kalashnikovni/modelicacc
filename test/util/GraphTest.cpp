@@ -23,9 +23,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include <boost/unordered_set.hpp>
 
-#include <ast/expression.h>
 #include <util/graph/graph_definition.h>
-#include <util/graph/graph_printer.h>
 
 using namespace boost::unit_test;
 

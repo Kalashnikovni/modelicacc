@@ -16,6 +16,9 @@
     along with Modelica C Compiler.  If not, see <http://www.gnu.org/licenses/>.
 
 ******************************************************************************/
+#ifndef GRAPH_PRINTER_
+#define GRAPH_PRINTER_
+
 #include <list>
 #include <iostream>
 #include <fstream>
@@ -24,7 +27,6 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include<ast/ast_types.h>
 #include<util/graph/graph_definition.h>
 
 using namespace std;
@@ -135,3 +137,4 @@ namespace Graph{
     };
   };
 } // namespace Graph
+#endif
