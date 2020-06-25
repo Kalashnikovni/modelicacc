@@ -230,7 +230,13 @@ void MMO_Class::insertElement(Element e)
   }
 }
 
-void MMO_Class::addVar(Name n, VarInfo var) { syms_.insert(n, var); }
+void MMO_Class::addVar(Name n, VarInfo var){ 
+  syms_.insert(n, var); 
+}
+
+void MMO_Class::rmVar(Name n){
+  syms_.remove(n);
+}
 
 Option<VarInfo> MMO_Class::getVar(Name n)
 {

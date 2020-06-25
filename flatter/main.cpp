@@ -69,7 +69,6 @@ int main(int argc, char** argv){
     MMO_Class mmo = mt.create(sd);
 
     Flatter f = Flatter();
-    Connectors co(mmo);
     if(className == NULL)
       className = (char*)::className(sd.classes().back()).c_str();
     
@@ -100,7 +99,8 @@ int main(int argc, char** argv){
       std::cerr << " - - - - - - - - - - - - - - - - - - - - - - - - " << std::endl << std::endl;
     }
 
-    co.createGraph(mmo.equations_ref().equations_ref());
+    Connectors co(mmo);
+    co.solve();
     if(debug){
       std::cerr << " - - - - - - - - - - - - - - - - - - - - - - - - " << std::endl;
       co.debug(filename);

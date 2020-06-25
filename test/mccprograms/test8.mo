@@ -8,22 +8,19 @@ model A
 		Real tt;
 	end BB;
 	BB qw;
+    Real den = 3;
 equation
-	for i in 1:3 loop
+	for i in 1:5 loop
       for j in 1:5 loop
-		connect(a[i, j],b[i, j]);	
+         for k in 1:5 loop
+		   connect(a[i, j, k],b[i, j, k]);	
+         end for;
       end for;
 	end for;
 
-	for i in 1:5 loop
-		connect(b[i],c[i ]);	
-	end for;
-
-    connect(a[1:3, 1, 3], b[1:5, 1, 3]);
 
 	for i in 1:5 loop
-		connect(c[i],r);	
+		connect(c[i], c[i]);	
 	end for;	
-	a[1].v = 10;
 end A;
 

@@ -23,7 +23,7 @@ SRC_COMMON := \
 
 all: $(LIBMODELICA) doc
 
-include causalize/Makefile.include
+#include causalize/Makefile.include
 include test/util/Makefile.include
 include parser/Makefile.include
 include test/parse/Makefile.include

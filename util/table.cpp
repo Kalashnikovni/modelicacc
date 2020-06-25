@@ -49,3 +49,13 @@ std::ostream& operator<<(std::ostream& out, const VarInfo& v)  // output
   out << "type: " << v.type() << " state: " << v.state() << " builtin: " << v.builtin();
   return out;
 }
+
+std::ostream &operator<<(std::ostream &out, const VarSymbolTable &vst){
+  typename std::map<Name, VarInfo>::const_iterator it;
+
+  for(it = vst.begin(); it != vst.end(); ++it){
+    out << it->first << ": " << it->second << "\n";
+  }
+
+  return out;
+}

@@ -28,7 +28,12 @@
 
 namespace Modelica{
 
-EvalExpression::EvalExpression(const VarSymbolTable &v) : vtable(v){};
+EvalExpression::EvalExpression(const VarSymbolTable &v) : vtable(v){
+  Option<Name> nm;
+  name = nm;
+  Option<Real> r;
+  val = r;
+};
 
 EvalExpression::EvalExpression(const VarSymbolTable &v, Name n, Real r) : vtable(v), name(n), val(r){};
 
@@ -163,7 +168,7 @@ Real EvalExpression::operator()(Reference v) const{
   if (name && name.get() == s) return val.get();
 
   Option<VarInfo> vinfo = vtable[s];
-  if (!vinfo) ERROR("EvalExpression: Variable %s not found !", s.c_str());
+  if (!vinfo) ERROR("EvalExpression: Variable %s not found!", s.c_str());
   if (!vinfo.get().modification()) {
     ERROR("EvalExpression: Variable %s without initial value!", s.c_str());
   }
@@ -203,166 +208,292 @@ Real EvalExpression::operator()(Reference v) const{
 
 /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 /*-----------------------------------------------------------------------------------------------*/
-// Debugging functions --------------------------------------------------------------------------//
+// Flatter EvalExp ------------------------------------------------------------------------------//
 /*-----------------------------------------------------------------------------------------------*/
 /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 
-EvalExpFlatter::EvalExpFlatter(const VarSymbolTable &v) : EvalExpression(v){};
+// This visitor is intended to be used for array subscripts
+
+EvalExpFlatter::EvalExpFlatter(const VarSymbolTable &v) : vtable(v){
+  Option<Name> nm;
+  name = nm;
+  Option<Real> r;
+}
 
 EvalExpFlatter::EvalExpFlatter(const VarSymbolTable &v, Name n, Real r) 
-  : EvalExpression(v, n, r){};
+  : vtable(v), name(n), val(r){};
 
-Real EvalExpFlatter::operator()(Integer v) const {return v;}
+Interval EvalExpFlatter::operator()(Integer v) const{
+  Interval i(v, 1, v);
+  return i;
+}
 
-Real EvalExpFlatter::operator()(Boolean v) const{
+Interval EvalExpFlatter::operator()(Boolean v) const{
+  NI1 res = 0;
   if (v.val()) 
-    return 1.0;
-  return 0.0;
+    res = 1;
+
+  Interval i(res, 1, res);
+  return i;
 }
 
-Real EvalExpFlatter::operator()(String v) const{
-  ERROR("EvalExpression: trying to evaluate a String");
-  return 0;
+Interval EvalExpFlatter::operator()(String v) const{
+  ERROR("EvalExpFlatter: trying to evaluate a String");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(Name v) const{
-  ERROR("EvalExpression: trying to evaluate a Name");
-  return 0;
+Interval EvalExpFlatter::operator()(Name v) const{
+  ERROR("EvalExpFlatter: trying to evaluate a Name");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(Real v) const {return v;}
-
-Real EvalExpFlatter::operator()(SubAll v) const{
-  ERROR("EvalExpression: trying to evaluate a SubAll");
-  return 0;
+Interval EvalExpFlatter::operator()(Real v) const {
+  NI1 res = v;
+  Interval i(res, 1, res);
+  return i;
 }
 
-Real EvalExpFlatter::operator()(SubEnd v) const{
-  ERROR("EvalExpression: trying to evaluate a SubEnd");
-  return 0;
+Interval EvalExpFlatter::operator()(SubAll v) const{
+/*
+  Option<VarInfo> ovi = vtable[v];
+  if(ovi){
+    VarInfo vi = *ovi;
+    Option<ExpList> oinds = vi.indices();
+    if(oinds){
+      ExpList inds = *oinds;
+      ExpList::iterator itinds = inds.begin();
+
+      for(int i = 0; i < ???; i++)
+        ++itinds;
+
+      Expression aux = *itinds;
+      NI1 to = ApplyThis(itinds);
+      Interval i(1, 1, to);
+      return i;
+    }
+  }
+*/
+  ERROR("EvalExpFlatter: trying to evaluate a SubAll");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(BinOp v) const{
+Interval EvalExpFlatter::operator()(SubEnd v) const{
+  ERROR("EvalExpFlatter: trying to evaluate a SubEnd");
+  Interval i;
+  return i;
+}
+
+Interval EvalExpFlatter::operator()(BinOp v) const{
   Expression l = v.left(), r = v.right();
-  Real v1 = ApplyThis(l), v2 = ApplyThis(r);
-  switch (v.op()){
-    case Add:
-      return v1 + v2;
-    case Sub:
-      return v1 - v2;
-    case Or:
-      return abs(v1) + abs(v2);
-    case And:
-      return v1 * v2;
-    case Lower:
-      if(v1 < v2) return 1.0;
-      return 0.0;
-    case LowerEq:
-      if(v1 <= v2) return 1.0;
-      return 0.0;
-    case Greater:
-      if(v1 > v2) return 1.0;
-      return 0.0;
-    case GreaterEq:
-      if(v1 >= v2) return 1.0;
-      return 0.0;
-    case CompEq:
-      if(v1 == v2) return 1.0;
-      return 0.0;
-    case CompNotEq:
-      if(v1 != v2) return 1.0;
-      return 0.0;
-    default:
-      ERROR("EvalExpression: BinOp %s not supported.", BinOpTypeName[v.op()]);
-      return 0;
-  }
-}
+  Interval ll = ApplyThis(l), rr = ApplyThis(r); 
 
-Real EvalExpFlatter::operator()(UnaryOp v) const{
-  if (v.op() == Minus){
-    Expression e = v.exp();
-    return -ApplyThis(e);
-  } 
+  // Operations using constants
+  if(ll.size() == 1 && rr.size() == 1){
+    Real nl = ll.lo_();
+    Real nr = rr.lo_();
+    BinOp bop(nl, v.op(), nr);
+    Expression e(bop);
+    EvalExpression evexp(vtable);
 
-  else if (v.op() == Plus){
-    Expression e = v.exp();
-    return ApplyThis(e);
+    Real res = Apply(evexp, e);
+    Interval i(res, 1, res);   
+    return i;
   }
 
-  ERROR("EvalExpression: trying to evaluate a UnaryOp");
-  return 0;
+  else if(ll.size() == 1){
+    switch(v.op()){
+      case Add:
+        {
+          Interval i(ll.lo_() + rr.lo_(), 
+                     rr.step_(), 
+                     ll.hi_() + rr.hi_());
+          return i;
+        }
+      case Sub:
+        {
+          Interval i(ll.lo_() - rr.lo_(), 
+                    rr.step_(), 
+                    ll.hi_() - rr.hi_());
+          return i;
+        }
+      case Mult:
+        {
+          Interval i(ll.lo_() * rr.lo_(), 
+                     ll.lo_() * rr.step_(), 
+                     ll.hi_() * rr.hi_());
+          return i;
+        }
+      default:
+        {
+          ERROR("EvalExpFlatter: BinOp is not allowed");
+          Interval i;
+          return i;
+        }
+    }
+  }
+
+  else if(rr.size() == 1){
+    switch(v.op()){
+      case Add:
+        {
+          Interval i(ll.lo_() + rr.lo_(), 
+                     ll.step_(), 
+                     ll.hi_() + rr.hi_());
+          return i;
+        }
+      case Sub:
+        {
+          Interval i(ll.lo_() - rr.lo_(), 
+                     ll.step_(), 
+                     ll.hi_() - rr.hi_());
+          return i;
+        }
+      case Mult:
+        {
+          Interval i(ll.lo_() * rr.lo_(), 
+                     ll.lo_() * rr.step_(), 
+                     ll.hi_() * rr.hi_());
+          return i;
+        }
+      default:
+        {
+          ERROR("EvalExpFlatter: BinOp is not allowed");
+          Interval i;
+          return i;
+        }
+    }
+  }
+
+  ERROR("EvalExpFlatter: BinOp is not allowed");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(IfExp v) const{
-  ERROR("EvalExpression: trying to evaluate a IfExp");
-  return 0;
+Interval EvalExpFlatter::operator()(UnaryOp v) const{
+  EvalExpression evexp(vtable);
+  Expression e(v);
+  Real aux = Apply(evexp, e);
+  int res = aux;
+  Interval i(res, 1, res);
+
+  return i;
 }
 
-Real EvalExpFlatter::operator()(Range v) const{
-  ERROR("EvalExpression: trying to evaluate a Range");
-  return 0;
+Interval EvalExpFlatter::operator()(IfExp v) const{
+  ERROR("EvalExpFlatter: trying to evaluate a IfExp");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(Brace v) const{
-  WARNING("EvalExpression: trying to evaluate a Brace");
-  return 0;
+Interval EvalExpFlatter::operator()(Range v) const{
+  EvalExpression evexp(vtable);
+  Expression st = v.start();
+  Real auxLo = Apply(evexp, st);
+  Real auxStep = 1.0;
+  Expression en = v.end();
+  Real auxHi = Apply(evexp, en);
+
+  if(v.step()){
+    st = *(v.step());
+    auxStep = Apply(evexp, st);
+  }
+
+  NI1 newLo = auxLo;
+  NI1 newStep = auxStep;
+  NI1 newHi = auxHi;
+
+  Interval i(newLo, newStep, newHi);
+  return i;
 }
 
-Real EvalExpFlatter::operator()(Bracket v) const{
-  ERROR("EvalExpression: trying to evaluate a Bracket");
-  return 0;
+Interval EvalExpFlatter::operator()(Brace v) const{
+  WARNING("EvalExpFlatter: trying to evaluate a Brace");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(Call v) const{
-  if ("integer" == v.name())
-    return ApplyThis(v.args().front());
+Interval EvalExpFlatter::operator()(Bracket v) const{
+  ERROR("EvalExpFlatter: trying to evaluate a Bracket");
+  Interval i;
+  return i;
+}
 
-  if ("exp" == v.name()) 
-    return exp(ApplyThis(v.args().front()));
+Interval EvalExpFlatter::operator()(Call v) const{
+  if ("integer" == v.name()){
+    EvalExpression evexp(vtable);
+    Real aux = Apply(evexp, v.args().front());
+    int res = aux;
+    Interval i(res, 1, res);
+    return i;
+  }
+
+  if ("exp" == v.name()){ 
+    EvalExpression evexp(vtable);
+    Real aux = exp(Apply(evexp, v.args().front()));
+    int res = aux;
+    Interval i(res, 1, res);
+    return i;
+  }
   
-  ERROR("EvalExpression: trying to evaluate a Call");
+  ERROR("EvalExpFlatter: trying to evaluate a Call");
   return 0;
 }
 
-Real EvalExpFlatter::operator()(FunctionExp v) const{
-  ERROR("EvalExpression: trying to evaluate a FunctionExp");
-  return 0;
+Interval EvalExpFlatter::operator()(FunctionExp v) const{
+  ERROR("EvalExpFlatter: trying to evaluate a FunctionExp");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(ForExp v) const{
-  ERROR("EvalExpression: trying to evaluate a ForExp");
-  return 0;
+Interval EvalExpFlatter::operator()(ForExp v) const{
+  ERROR("EvalExpFlatter: trying to evaluate a ForExp");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(Named v) const{
-  ERROR("EvalExpression: trying to evaluate a Named");
-  return 0;
+Interval EvalExpFlatter::operator()(Named v) const{
+  ERROR("EvalExpFlatter: trying to evaluate a Named");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(Output v) const{
-  ERROR_UNLESS(v.args().size() == 1, "EvalExpression: Output expression with more than one element are not supported");
+Interval EvalExpFlatter::operator()(Output v) const{
+  ERROR_UNLESS(v.args().size() == 1, "EvalExpFlatter: Output expression with more than one element are not supported");
   if (v.args().front()){
     Expression e = v.args().front().get();
-    return ApplyThis(e);
+    EvalExpression evexp(vtable);
+    Real aux = Apply(evexp, e);
+    int res = aux;
+    Interval i(res, 1, res);
+    return i;
   }
 
-  ERROR("EvalExpression: Output with no expression");
-  return 0;
+  ERROR("EvalExpFlatter: Output with no expression");
+  Interval i;
+  return i;
 }
 
-Real EvalExpFlatter::operator()(Reference v) const{
+Interval EvalExpFlatter::operator()(Reference v) const{
   Ref r = v.ref();
-  ERROR_UNLESS(r.size() == 1, "EvalExpression: conversion of dotted references not implemented");
+  ERROR_UNLESS(r.size() == 1, "EvalExpFlatter: conversion of dotted references not implemented");
   Option<ExpList> oel = boost::get<1>(r[0]);
-  ERROR_UNLESS((bool)oel, "EvalExpression: conversion of subscripted references not implemented");
+  ERROR_UNLESS((bool)oel, "EvalExpFlatter: conversion of subscripted references not implemented");
   Name s = boost::get<0>(r[0]);
 
-  if (name && name.get() == s) return val.get();
+  if (name && name.get() == s){
+    Real aux = val.get();
+    NI1 res = aux;
+    Interval i(res, 1, res);
+    return i;
+  }
 
   Option<VarInfo> vinfo = vtable[s];
-  if (!vinfo) ERROR("EvalExpression: Variable %s not found !", s.c_str());
+  if (!vinfo) ERROR("EvalExpFlatter: Variable %s not found !", s.c_str());
   if (!vinfo.get().modification()) {
-    ERROR("EvalExpression: Variable %s without initial value!", s.c_str());
+    ERROR("EvalExpFlatter: Variable %s without initial value!", s.c_str());
   }
 
   Modification m = vinfo.get().modification().get();
@@ -394,7 +525,7 @@ Real EvalExpFlatter::operator()(Reference v) const{
   }
 
   std::cerr << m << "\n";
-  ERROR("EvalExpression: cannot evaluate class modification");
+  ERROR("EvalExpFlatter: cannot evaluate class modification");
   return 0;
 }
 }  // namespace Modelica

@@ -47,18 +47,23 @@ class Connectors{
 
   void debug(std::string filename);
 
-  void createGraph(EquationList &eqs/*, OptExpList range*/);
-  Pair<Expression, ExpOptList> separate(Expression e);
+  void solve();
+  void createGraph(EquationList &eqs);
+  void connect(Connect co);
+  Pair<Name, ExpOptList> separate(Expression e);
+  MultiInterval createVertex(Name n);
   bool checkRanges(ExpOptList range1, ExpOptList range2);
-  Interval parseExpToInter(Expression e);
-  void updateGraph(MultiInterval mi1, MultiInterval mi2);
+  Option<SetEdgeDesc> existsEdge(SetVertexDesc d1, SetVertexDesc d2);
+  void updateGraph(SetVertexDesc d1, SetVertexDesc d2, MultiInterval mi1, MultiInterval mi2);
   //bool isParseNum(Expression e);
   //Option<LinearFunc> parseAddSub(Expression l, Expression r, BinOpType bopt);
   //Option<SetVertexLF> createVertex(Expression e, ExpOptList range);
 
   private:
-  member_(int, vCount);
-  member_(SBGraph, G);
+  SBGraph G;
+  member_(vector<NI1>, vCount);
+  member_(vector<NI1>, eCount1);
+  member_(int, eCount2);
   member_(MMO_Class, mmoclass);
 };
 
