@@ -37,6 +37,8 @@ member_imp(Connectors, vector<int>, vCount);
 member_imp(Connectors, vector<int>, eCount1);
 member_imp(Connectors, int, eCount2);
 member_imp(Connectors, MMO_Class, mmoclass);
+member_imp(Connectors, VertexNameTable, vnmtable);
+member_imp(Connectors, NameVertexTable, nmvtable);
 
 /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 /*-----------------------------------------------------------------------------------------------*/
@@ -45,6 +47,23 @@ member_imp(Connectors, MMO_Class, mmoclass);
 /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 
 void Connectors::debug(std::string filename){
+  VertexIt vi, vi_end;
+  boost::tie(vi, vi_end) = boost::vertices(G);
+  for(; vi != vi_end; ++vi){
+    Name n = G[*vi].name;
+    Set vs = G[*vi].vs_();
+    cout << n << ": " << vs << "\n";
+  }
+
+  EdgeIt ei, ei_end;
+  boost::tie(ei, ei_end) = boost::edges(G);
+  for(; ei != ei_end; ++ei){
+    Name n = G[*ei].name;
+    PWLMap es1 = G[*ei].es1_();
+    PWLMap es2 = G[*ei].es2_();
+    cout << n << ": " << es1 << ", " << es2 << "\n";
+  }
+
   GraphPrinter gp(G, -1);
 
   gp.printGraph(filename);
@@ -78,28 +97,11 @@ void Connectors::solve(){
 
   createGraph(mmoclass_.equations_ref().equations_ref());
 
-  VertexIt vi, vi_end;
-  boost::tie(vi, vi_end) = boost::vertices(G);
-  for(; vi != vi_end; ++vi){
-    Name n = G[*vi].name;
-    Set vs = G[*vi].vs_();
-    cout << n << ": " << vs << "\n";
-  }
-
-  EdgeIt ei, ei_end;
-  boost::tie(ei, ei_end) = boost::edges(G);
-  for(; ei != ei_end; ++ei){
-    Name n = G[*ei].name;
-    PWLMap es1 = G[*ei].es1_();
-    PWLMap es2 = G[*ei].es2_();
-    cout << n << ": " << es1 << ", " << es2 << "\n";
-  }
-
   debug("prueba.dot");
 
   PWLMap res = connectedComponents(G);
-  cout << res << "\n";
-  //generateCode();
+  generateCode(res);
+  cout << "\n" << mmoclass_ << "\n";
 }
 
 void Connectors::createGraph(EquationList &eqs){
@@ -330,13 +332,11 @@ MultiInterval Connectors::createVertex(Name n){
         EvalExpression evexp(auxt);
   
         foreach_(Expression e, inds){
-          //cout << n << ": " << e << "\n";
           if(is<SubAll>(e) || is<Range>(e))
             ERROR("Ill-defined array");
    
           Real res = Apply(evexp, e);
           Interval i(*itvc, 1, *itvc + res - 1);
-          //cout << i << "\n";
           if(!i.empty_()){
             itmi1 = mi1.insert(itmi1, i);
             itnew = newvc.insert(itnew, *itvc + res);
@@ -360,8 +360,6 @@ MultiInterval Connectors::createVertex(Name n){
         AtomSet as(mi);
         Set s;
         s.addAtomSet(as);
-  
-        //cout << n << ": " << s << "\n";
   
         SetVertex V(n, s);
         SetVertexDesc v = boost::add_vertex(G);
@@ -395,8 +393,6 @@ MultiInterval Connectors::createVertex(Name n){
         Set s;
         s.addAtomSet(as);
   
-        //cout << n << ": " << s << "\n";
-  
         SetVertex V(n, s);
         SetVertexDesc v = boost::add_vertex(G);
  
@@ -406,6 +402,8 @@ MultiInterval Connectors::createVertex(Name n){
     }
   }
 
+  vnmtable_.insert(mires, n);
+  nmvtable_.insert(n, mires);
   return mires;
 }
 
@@ -581,8 +579,6 @@ void Connectors::updateGraph(SetVertexDesc d1, SetVertexDesc d2,
     ctlm2.insert(ctlm2.end(), lm2); 
     PWLMap e2(cts2, ctlm2);
 
-    //cout << e1 << ", " << e2 << "\n";
-
     Option<SetEdgeDesc> oedge = existsEdge(d1, d2);    
 
     if(oedge){
@@ -612,3 +608,396 @@ void Connectors::updateGraph(SetVertexDesc d1, SetVertexDesc d2,
   else
     cerr << "Incompatible connect\n";
 }
+
+void Connectors::generateCode(PWLMap pw){
+  EquationList res;
+  EquationList::iterator itres = res.begin();
+
+  Set vcdom = pw.wholeDom();
+  Set vcim = pw.image(vcdom);
+
+  foreach_(AtomSet as, vcim.asets_()){
+    Set auxs;
+    auxs.addAtomSet(as);
+    Set vcdomi = pw.preImage(auxs);
+    Set vcdomiaux = vcdomi.diff(auxs);
+
+    // Variables of equality in the ForEq
+    Pair<vector<Name>, vector<Name>> p = separateVars();
+
+    ExpList nms;
+    ExpList::iterator itnms = nms.begin();
+
+    foreach_(AtomSet auxi, vcdomiaux.asets_()){
+      MultiInterval mi = auxi.aset_();
+
+      IndexList ran1;
+      IndexList::iterator itran1 = ran1.begin(); 
+      int ascii = 0;
+      OrdCT<NI1> off1 = getOff(mi);
+      MultiInterval mirange1 = applyOff(mi, off1);
+      // Range of ForEq
+      foreach_(Interval i, mirange1.inters_()){
+        string s(1, 105 + ascii);
+        Expression nm(s);
+        itnms = nms.insert(itnms, nm);
+        ++itnms;
+
+        Expression elo(i.lo_());
+        Expression est(i.step_());
+        Expression ehi(i.hi_());
+        Range auxr(elo, est, ehi);
+        Expression auxer(auxr);
+        Option<Expression> r(auxer); 
+
+        Index ind(s, r);
+        itran1 = ran1.insert(itran1, ind);
+        ++itran1;
+      }
+      Indexes range1(ran1);
+
+      Set sauxi;
+      sauxi.addAtomSet(auxi);
+      vector<Name> effvars = get<0>(p);
+      vector<Pair<Name, Name>> vars1 = getVars(effvars, sauxi);
+      vector<Pair<Name, Name>>::iterator itv1 = vars1.begin();
+
+      vector<Pair<Name, Name>> vars2 = getVars(effvars, auxs);
+      vector<Pair<Name, Name>>::iterator itv2 = vars2.begin();
+
+      itnms = nms.begin();
+      OrdCT<NI1> off2 = getOff(as.aset_());
+      MultiInterval auxmi1 = applyOff(as.aset_(), off2);
+      Pair<ExpList, bool> tm1 = transMulti(mirange1, auxmi1, nms, false);
+      ExpList inds1 = get<0>(tm1);
+
+      for(; itv1 != vars1.end(); ++itv1){
+        for(; itv2 != vars2.end(); ++itv2){
+          if(get<1>(*itv1) == get<1>(*itv2)){
+            Reference ref1(get<0>(*itv1), nms); // Left of equality
+            Expression l(ref1);
+
+            Reference ref2(get<0>(*itv2), inds1);
+            Expression r(ref2);
+
+            Equality eq1(l, r);
+
+            EquationList auxeqlist1;
+            auxeqlist1.insert(auxeqlist1.begin(), eq1);
+
+            ForEq feq1(range1, auxeqlist1);
+
+            itres = res.insert(itres, feq1);
+            ++itres;
+          }
+        }
+      }
+    }
+  
+    IndexList ran2; 
+    IndexList::iterator itran2 = ran2.begin();
+    itnms = nms.begin();
+    OrdCT<NI1> off3 = getOff(as.aset_());
+    MultiInterval mirange2 = applyOff(as.aset_(), off3); 
+    //Range of ForEq of flow vars
+    foreach_(Interval i, mirange2.inters_()){
+      Expression elo(i.lo_());
+      Expression est(i.step_());
+      Expression ehi(i.hi_());
+      Range auxr(elo, est, ehi);
+      Expression auxer(auxr);
+      Option<Expression> r(auxer); 
+
+      string auxvar = boost::get<Name>(*itnms);
+      Index ind(auxvar, r);
+      itran2 = ran2.insert(itran2, ind);
+      ++itran2;
+      ++itnms;
+    }
+    Indexes range2(ran2);
+
+    vector<Name> flowvars = get<0>(p);
+
+    ExpList exps;
+    ExpList::iterator itexps = exps.begin();
+
+    foreach_(AtomSet auxi, vcdomi.asets_()){
+      //OrdCT<NI1> off3 = getOff(as.aset_());
+      //MultiInterval mirange2 = applyOff(as.aset_(), off3); 
+
+      OrdCT<NI1> off4 = getOff(auxi.aset_());
+      MultiInterval auxmi2 = applyOff(auxi.aset_(), off4); 
+      Pair<ExpList, bool> tm2 = transMulti(mirange2, auxmi2, nms, true);
+      ExpList inds2 = get<0>(tm2);
+
+      Set sauxi;
+      sauxi.addAtomSet(auxi);
+      vector<Pair<Name, Name>> vars3 = getVars(flowvars, sauxi);
+      vector<Pair<Name, Name>>::iterator itv3 = vars3.begin();
+
+      for(; itv3 != vars3.end(); ++itv3){
+        Expression auxexp;
+
+        if(get<1>(tm2)){
+          RefTuple rt(get<0>(*itv3), inds2);
+          AddAll aa(rt);
+          Expression eaa(aa);
+          auxexp = eaa; 
+        }
+
+        else{
+          Reference ref3(get<0>(*itv3), inds2); 
+          Expression eref3(ref3);
+          auxexp = eref3;
+        }
+
+        itexps = exps.insert(itexps, auxexp); 
+        ++itexps;
+      }
+    }
+
+    itexps = exps.begin();
+    Expression flowexp(*itexps);
+    ++itexps;
+    // Add all flow vars
+    for(; itexps != exps.end(); ++itexps){
+      BinOp bop(flowexp, Add, *itexps);
+      Expression ebop(bop);
+      flowexp = ebop;
+    }
+
+    Expression zero(0);
+
+    Equality eq2(flowexp, zero);
+
+    EquationList auxeqlist2;
+    auxeqlist2.insert(auxeqlist2.begin(), eq2);
+
+    ForEq feq2(range2, auxeqlist2);
+
+    itres = res.insert(itres, feq2);
+    ++itres;
+  }    
+
+  EquationSection eqres(false, res);
+  mmoclass_.set_equations(eqres);
+}
+
+OrdCT<NI1> Connectors::getOff(MultiInterval mi){
+  OrdCT<NI1> res;
+  typename std::map<Name, MultiInterval>::iterator it;
+
+  for(it = nmvtable_.begin(); it != nmvtable_.end(); ++it){
+    MultiInterval aux = mi.cap(it->second);
+    if(!aux.empty())
+      res = (it->second).minElem();
+  }
+
+  return res;
+}
+
+Pair<vector<Name>, vector<Name>> Connectors::separateVars(){
+  vector<Name> vars1;
+  vector<Name>::iterator itvars1 = vars1.begin();
+  vector<Name> vars2;
+  vector<Name>::iterator itvars2 = vars2.begin();
+
+  foreach_(Name n, mmoclass_.variables()){
+    if(!isFlowVar(n)){
+      itvars1 = vars1.insert(itvars1, n);
+      ++itvars1;
+    }
+ 
+    else{
+      itvars2 = vars2.insert(itvars2, n);
+      ++itvars2;
+    }
+  }
+
+  Pair<vector<Name>, vector<Name>> p(vars1, vars2);
+  return p;
+} 
+
+bool Connectors::isFlowVar(Name n){
+  Option<VarInfo> ovi = mmoclass_.syms_ref()[n];
+  if(ovi){
+    VarInfo vi = *ovi;
+    TypePrefixes::iterator ittp = vi.prefixes_ref().begin(); 
+    for(; ittp != vi.prefixes_ref().end(); ++ittp){
+      Option<TypePrefix> otp = *ittp;
+      if(otp){
+        TypePrefix tp = *otp;
+        if(tp == flow)
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+vector<Pair<Name, Name>> Connectors::getVars(vector<Name> vs, Set sauxi){
+  VertexIt vi, vi_end;
+  boost::tie(vi, vi_end) = boost::vertices(G);
+  vector<Pair<Name, Name>> vars;
+  vector<Pair<Name, Name>>::iterator itvars = vars.begin();
+
+  for(; vi != vi_end; ++vi){
+    Set v = (G[*vi]).vs_();
+    Name nm = (G[*vi]).name;
+
+    if(!(v.cap(sauxi)).empty()){
+      foreach_(Name n, vs){
+        if(n.length() > nm.length()){
+          if(n.substr(0, nm.length()) == nm && n.substr(nm.length(), 1) == "_"){
+            Name suffix = n.substr(nm.length() + 1);
+            Pair<Name, Name> p(n, suffix);
+            itvars = vars.insert(itvars, p);
+            ++itvars;
+          }
+        }
+      }
+    }
+  }
+
+  return vars;
+}
+
+Pair<ExpList, bool> Connectors::transMulti(MultiInterval mi1, MultiInterval mi2, 
+                                           ExpList nms, bool forFlow){
+  ExpList res;
+  ExpList::iterator itres = res.begin();
+  bool bres = false;
+
+  ExpList::iterator itnms = nms.begin();
+  OrdCT<Interval> mi22 = mi2.inters_();
+  OrdCT<Interval>::iterator itmi2 = mi22.begin(); 
+
+  if(mi1.ndim_() == mi2.ndim_()){
+    foreach_(Interval i1, mi1.inters_()){
+      NI1 m3;
+      NI1 h3;
+
+      Expression x;
+      if(is<Name>(*itnms))
+        x = *itnms;
+
+      else{
+        ERROR("Should be a name");
+        ExpList auxres;
+        Pair<ExpList, bool> pres(auxres, false);
+        return pres;
+      }
+
+      if(i1.size() == (*itmi2).size()){
+        m3 = (*itmi2).step_() / i1.step_();
+        h3 = (-m3) * i1.lo_() + (*itmi2).lo_();
+
+        BinOp multaux(m3, Mult, x);
+        Expression mult(multaux);
+        Expression h(h3);
+        BinOp linearaux(mult, Add, h);
+        Expression linear(linearaux);
+
+        itres = res.insert(itres, linear);
+        ++itres;
+      }
+
+      else if((*itmi2).size() == 1 && !forFlow){
+        m3 = 0;
+        h3 = (*itmi2).lo_();
+
+        Expression linear(h3);
+
+        itres = res.insert(itres, linear);
+        ++itres;
+      }
+
+      else if(i1.size() == 1 && forFlow){
+        Expression lo((*itmi2).lo_());
+        Expression st((*itmi2).step_());
+        Expression hi((*itmi2).hi_());
+        Range r(lo, st, hi);
+        Expression er(r);
+
+        itres = res.insert(itres, er);
+        ++itres;
+
+        bres = true;
+      }
+
+      else{
+        ERROR("Operation not allowed");
+        ExpList auxres;
+        Pair<ExpList, bool> pres(auxres, false);
+        return pres;
+      }
+
+      ++itmi2; 
+    }
+  }
+
+  Pair<ExpList, bool> pres(res, bres);
+  return pres;
+}
+
+MultiInterval Connectors::applyOff(MultiInterval mi, OrdCT<NI1> off){
+  OrdCT<Interval> res;
+  OrdCT<Interval>::iterator itres = res.begin();
+
+  OrdCT<NI1>::iterator itoff = off.begin();
+
+  if(mi.ndim_() == (int) off.size()){
+    foreach_(Interval i, mi.inters_()){
+      Interval iaux(i.lo_() - (*itoff) + 1, i.step_(), i.hi_() - (*itoff) + 1);
+
+      itres = res.insert(itres, iaux);
+      ++itres;
+ 
+      ++itoff;
+    }
+  }
+
+  MultiInterval mires(res);
+  return mires;
+}
+
+/*
+ExpList Connectors::lmToExpList(LMap lm, ExpList nms){
+  ExpList res;
+  ExpList::iterator itres = res.begin();
+
+  OrdCT<NI2> o = lm.off_();
+  OrdCT<NI2>::iterator ito = o.begin(); 
+
+  ExpList::iterator itnms = nms.begin();
+
+  foreach_(NI2 gi, lm.gain_()){
+    Expression m(gi);
+
+    Expression x;
+    if(is<Name>(*itnms)) 
+      x = *itnms;
+
+    else{
+      ERROR("Should be a name");
+      ExpList auxres;
+      return res;
+    }
+
+    BinOp multaux(m, Mult, x);
+    Expression mult(multaux);
+    Expression h(*ito);
+    BinOp linearaux(mult, Add, h);
+    Expression linear(linearaux);
+
+    itres = res.insert(itres, linear);
+    ++itres;
+
+    ++ito;
+    ++itnms;
+  }
+
+  return res;
+}*/
+

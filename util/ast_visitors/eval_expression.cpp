@@ -45,6 +45,11 @@ Real EvalExpression::operator()(Boolean v) const{
   return 0.0;
 }
 
+Real EvalExpression::operator()(AddAll v) const{
+  ERROR("EvalExpression: trying to evaluate a AddAll");
+  return 0;
+}
+
 Real EvalExpression::operator()(String v) const{
   ERROR("EvalExpression: trying to evaluate a String");
   return 0;
@@ -234,6 +239,12 @@ Interval EvalExpFlatter::operator()(Boolean v) const{
     res = 1;
 
   Interval i(res, 1, res);
+  return i;
+}
+
+Interval EvalExpFlatter::operator()(AddAll v) const{
+  ERROR("EvalExpFlatter: trying to evaluate an AddAll");
+  Interval i;
   return i;
 }
 

@@ -232,6 +232,7 @@ void MMO_Class::insertElement(Element e)
 
 void MMO_Class::addVar(Name n, VarInfo var){ 
   syms_.insert(n, var); 
+  //cout << n << ": " << var << "\n";
 }
 
 void MMO_Class::rmVar(Name n){

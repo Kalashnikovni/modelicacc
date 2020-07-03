@@ -41,12 +41,28 @@ bool VarInfo::isPrefix(TypePrefix p)
 void VarInfo::removePrefix(TypePrefix p)
 {
   TypePrefixes::iterator it = std::find(prefixes_ref().begin(), prefixes_ref().end(), Option<TypePrefix>(p));
-  if (it != prefixes_ref().end()) prefixes_ref().erase(it);
+  if (it != prefixes_ref().end()){ 
+    //Option<TypePrefix> otp = *it;
+    //if(otp){
+     // TypePrefix tp = *otp;
+      //std::cout << tp << "\n";
+    //}
+    prefixes_ref().erase(it);
+  }
 }
 
 std::ostream& operator<<(std::ostream& out, const VarInfo& v)  // output
 {
-  out << "type: " << v.type() << " state: " << v.state() << " builtin: " << v.builtin();
+  out << "type: " << v.type() << " state: " << v.state() << " builtin: " << v.builtin() << "\n";
+  VarInfo auxv = v;
+  TypePrefixes::iterator itpre = auxv.prefixes_ref().begin();
+  for(; itpre != auxv.prefixes_ref().end(); ++itpre){
+    Option<TypePrefix> otp = *itpre;
+    if(otp){
+      TypePrefix tp = *otp;
+      out << tp << "\n";
+    }
+  }
   return out;
 }
 

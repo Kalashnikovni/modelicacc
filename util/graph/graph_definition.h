@@ -230,15 +230,6 @@ struct IntervalImp1{
     int res = (hi - lo) / step + 1;
     return res;
   }
- 
-/*
-  void operator=(const IntervalImp1 &other){
-    lo = other.lo;
-    step = other.step;
-    hi = other.hi;
-    empty = other.empty;
-  }
-*/
 
   bool operator==(const IntervalImp1 &other) const{
     return (lo == other.lo) && (step == other.step) && (hi == other.hi) &&
@@ -322,12 +313,6 @@ struct IntervalAbs{
     return i.size();
   }
 
-/*
-  void operator=(const IntervalAbs &other){
-    i = other.i;
-  }
-*/
-
   bool operator==(const IntervalAbs &other) const{
     return i == other.i;
   }
@@ -404,9 +389,6 @@ struct MultiInterImp1{
   }
 
   void addInter(IntervalImp i){
-    //if(i.empty_())
-      //WARNING("Empty dimension");
-
     if(!i.empty_()){
       inters.insert(inters.end(), i);
       ++ndim;
@@ -590,12 +572,20 @@ struct MultiInterImp1{
 
     return MultiInterImp1(auxRes);
   }
-/*
-  void operator=(const MultiInterImp1 &other){
-    inters = other.inters;
-    ndim = other.ndim;
+
+  bool operator<(const MultiInterImp1 &other) const{
+    typename CT1<IntervalImp>::const_iterator iti2 = other.inters.begin();
+
+    BOOST_FOREACH(IntervalImp i1, inters){
+      IntervalImp aux = *iti2; 
+      if(i1.minElem() < aux.minElem())
+        return true;      
+
+      ++iti2;
+    }
+
+    return false;
   }
-*/
 
   bool operator==(const MultiInterImp1 &other) const{
     return inters == other.inters;
@@ -684,11 +674,10 @@ struct MultiInterAbs{
   MultiInterAbs replace(IntervalImp &i, int dim){
     return MultiInterAbs(multiInterImp.replace(i, dim));
   }
-/*
-  void operator=(const MultiInterAbs &other){
-    multiInterImp = other.multiInterImp;
-    ndim = other.ndim;
-  }*/
+
+  bool operator<(const MultiInterAbs &other) const{
+    return multiInterImp < other.multiInterImp;
+  }
 
   bool operator==(const MultiInterAbs &other) const{
     return multiInterImp == other.multiInterImp;
@@ -1959,6 +1948,31 @@ struct PWLMapImp1{
     PWLMapImp1 res(sres, lres);
     return res;
   }
+ 
+  PWLMapImp1 atomize(){
+    CTSet dres;
+    CTSetIt itdres = dres.begin();
+    CTLMap lres;
+    CTLMapIt itlres = lres.begin(); 
+
+    CTLMapIt itlm = lmap.begin();
+    BOOST_FOREACH(SetImp d, dom){
+      BOOST_FOREACH(ASetImp as, d.asets_()){
+        SetImp aux;
+        aux.addAtomSet(as);
+
+        itdres = dres.insert(itdres, aux);
+        ++itdres;
+        itlres = lres.insert(itlres, *itlm);
+        ++itlres;
+      }
+
+      ++itlm;
+    }   
+
+    PWLMapImp1 res(dres, lres);
+    return res;
+  }
 
   bool operator==(const PWLMapImp1 &other) const{
     return dom == other.dom && lmap == other.lmap;
@@ -2030,6 +2044,11 @@ struct PWLMapAbs{
 
   PWLMapAbs combine(PWLMapAbs &pw2){
     PWLMapImp aux = pw.combine(pw2.pw);
+    return PWLMapAbs(aux);
+  }
+ 
+  PWLMapAbs atomize(){
+    PWLMapImp aux = pw.atomize();
     return PWLMapAbs(aux);
   }
 

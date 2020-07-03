@@ -107,7 +107,7 @@ int main(int argc, char** argv){
       std::cerr << " - - - - - - - - - - - - - - - - - - - - - - - - " << std::endl;
     }
 
-    //f.removeConnectorVar(mmo);
+    f.removeConnectorVar(mmo);
     if (debug) 
       std::cerr << "Final Result: " << endl;
     /*

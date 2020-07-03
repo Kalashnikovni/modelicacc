@@ -33,6 +33,7 @@
 #include <util/ast_visitors/constant_expression.h>
 #include <util/graph/graph_definition.h>
 #include <util/graph/graph_printer.h>
+#include <util/table.h>
 #include <util/type.h>
 
 using namespace Modelica;
@@ -40,6 +41,14 @@ using namespace Modelica::AST;
 using namespace Graph;
 
 typedef Option<ExpList> ExpOptList; 
+
+struct VertexNameTable : public SymbolTable<MultiInterval, Name>{
+  VertexNameTable(){}
+};
+
+struct NameVertexTable : public SymbolTable<Name, MultiInterval>{
+  NameVertexTable(){}
+};
 
 class Connectors{
   public:
@@ -55,9 +64,14 @@ class Connectors{
   bool checkRanges(ExpOptList range1, ExpOptList range2);
   Option<SetEdgeDesc> existsEdge(SetVertexDesc d1, SetVertexDesc d2);
   void updateGraph(SetVertexDesc d1, SetVertexDesc d2, MultiInterval mi1, MultiInterval mi2);
-  //bool isParseNum(Expression e);
-  //Option<LinearFunc> parseAddSub(Expression l, Expression r, BinOpType bopt);
-  //Option<SetVertexLF> createVertex(Expression e, ExpOptList range);
+  void generateCode(PWLMap pw);
+  OrdCT<NI1> getOff(MultiInterval mi);
+  Pair<vector<Name>, vector<Name>> separateVars();
+  bool isFlowVar(Name n);
+  vector<Pair<Name, Name>> getVars(vector<Name> vs, Set sauxi);
+  Pair<ExpList, bool> transMulti(MultiInterval mi1, MultiInterval mi2, ExpList nms, bool forFlow);
+  MultiInterval applyOff(MultiInterval mi, OrdCT<NI1> off);
+  //ExpList lmToExpList(LMap lm, ExpList vs);
 
   private:
   SBGraph G;
@@ -65,6 +79,8 @@ class Connectors{
   member_(vector<NI1>, eCount1);
   member_(int, eCount2);
   member_(MMO_Class, mmoclass);
+  member_(VertexNameTable, vnmtable);
+  member_(NameVertexTable, nmvtable);
 };
 
 #endif

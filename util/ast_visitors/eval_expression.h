@@ -34,6 +34,7 @@ class EvalExpression : public boost::static_visitor<Real>{
   Real operator()(Integer v) const;
   Real operator()(Boolean v) const;
   Real operator()(String v) const;
+  Real operator()(AddAll v) const;
   Real operator()(Name v) const;
   Real operator()(Real v) const;
   Real operator()(SubEnd v) const;
@@ -61,6 +62,7 @@ class EvalExpFlatter{
   EvalExpFlatter(const VarSymbolTable &, Name, Real);
   Interval operator()(Integer v) const;
   Interval operator()(Boolean v) const;
+  Interval operator()(AddAll v) const;
   Interval operator()(String v) const;
   Interval operator()(Name v) const;
   Interval operator()(Real v) const;
