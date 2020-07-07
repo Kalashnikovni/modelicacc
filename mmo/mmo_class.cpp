@@ -237,6 +237,18 @@ void MMO_Class::addVar(Name n, VarInfo var){
 
 void MMO_Class::rmVar(Name n){
   syms_.remove(n);
+
+  std::vector<Name>::iterator itvars = variables_.begin();
+  std::vector<Name> newvars;
+  std::vector<Name>::iterator itnew = newvars.begin();
+  for(; itvars != variables_.end(); ++itvars){
+    if(*itvars != n){
+      itnew = newvars.insert(itnew, *itvars);
+      ++itnew;
+    }
+
+  }
+  set_variables(newvars);
 }
 
 Option<VarInfo> MMO_Class::getVar(Name n)

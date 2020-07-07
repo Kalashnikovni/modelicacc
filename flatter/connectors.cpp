@@ -100,8 +100,20 @@ void Connectors::solve(){
   debug("prueba.dot");
 
   PWLMap res = connectedComponents(G);
+  cout << "\n" << res << "\n";
   generateCode(res);
-  cout << "\n" << mmoclass_ << "\n";
+
+  foreach_(Name nm, mmoclass_.variables()){
+    Option<VarInfo> ovi = mmoclass_.getVar(nm);
+    if(ovi){
+      VarInfo vi = *ovi;
+      Name ty = vi.type();
+      if(ty != "Real" && ty != "Integer")
+        mmoclass_.rmVar(nm);
+    }
+  }
+
+  cout << mmoclass_ << "\n";
 }
 
 void Connectors::createGraph(EquationList &eqs){
@@ -110,6 +122,8 @@ void Connectors::createGraph(EquationList &eqs){
       connect(get<Connect>(eq));
 
     else if(is<ForEq>(eq)){
+      vector<Name> auxvars;
+      vector<Name>::iterator itvars = auxvars.begin();
       ForEq feq = boost::get<ForEq>(eq);
       foreach_(Index ind, feq.range().indexes()){
         Name n = ind.name();
@@ -124,12 +138,18 @@ void Connectors::createGraph(EquationList &eqs){
           ExpOptList aux5;
           VarInfo vi(tp, n, aux1, mod, aux5, false);
           mmoclass_.addVar(n, vi);
-          EquationList el = feq.elements();
-          createGraph(el);
-          mmoclass_.rmVar(n);
+          itvars = auxvars.insert(itvars, n);
+          ++itvars;
         }
         else 
           cerr << "Should be defined\n";
+      }
+
+      EquationList el = feq.elements();
+      createGraph(el);
+
+      foreach_(Name auxnm, auxvars){
+        mmoclass_.rmVar(auxnm);
       }
     }
   }
@@ -184,6 +204,7 @@ void Connectors::connect(Connect co){
       
         if(!l.empty_()){
           itmi11 = mi11.insert(itmi11, l);
+          ++itmi11;
           ++dim;
         }
 
@@ -196,9 +217,13 @@ void Connectors::connect(Connect co){
     }
 
     else{
-      NI1 auxlo = (*itmiv1).lo_();
-      Interval l(auxlo, 1, auxlo);
-      mi11.insert(mi11.begin(), l);
+      itmi11 = mi11.begin();
+      foreach_(Interval i1, miv1){
+        NI1 auxlo = i1.lo_();
+        Interval l(auxlo, 1, auxlo);
+        itmi11 = mi11.insert(itmi11, l);
+        ++itmi11;
+      }
     }
 
     MultiInterval mi1(mi11);
@@ -232,6 +257,7 @@ void Connectors::connect(Connect co){
 
         if(!r.empty_()){
           itmi22 = mi22.insert(itmi22, r);
+          ++itmi22;
           ++dim;
         }
 
@@ -244,9 +270,13 @@ void Connectors::connect(Connect co){
     }
 
     else{
-      NI1 auxlo = (*itmiv2).lo_();
-      Interval r(auxlo, 1, auxlo);
-      mi22.insert(mi22.begin(), r);
+      itmi22 = mi22.begin();
+      foreach_(Interval i2, miv2){
+        NI1 auxlo = i2.lo_();
+        Interval r(auxlo, 1, auxlo);
+        itmi22 = mi22.insert(itmi22, r);
+        ++itmi22;
+      }
     }
 
     MultiInterval mi2(mi22);
@@ -339,6 +369,7 @@ MultiInterval Connectors::createVertex(Name n){
           Interval i(*itvc, 1, *itvc + res - 1);
           if(!i.empty_()){
             itmi1 = mi1.insert(itmi1, i);
+            ++itmi1;
             itnew = newvc.insert(itnew, *itvc + res);
             ++itnew;
 
@@ -480,6 +511,7 @@ Option<SetEdgeDesc> Connectors::existsEdge(SetVertexDesc d1, SetVertexDesc d2){
 
 void Connectors::updateGraph(SetVertexDesc d1, SetVertexDesc d2, 
                              MultiInterval mi1, MultiInterval mi2){
+  cout << mi1 << "; " << mi2 << "\n";
   OrdCT<Interval> ints1 = mi1.inters_();
   OrdCT<Interval>::iterator itints1 = ints1.begin();
   OrdCT<Interval> ints2 = mi2.inters_();
@@ -579,8 +611,9 @@ void Connectors::updateGraph(SetVertexDesc d1, SetVertexDesc d2,
     ctlm2.insert(ctlm2.end(), lm2); 
     PWLMap e2(cts2, ctlm2);
 
-    Option<SetEdgeDesc> oedge = existsEdge(d1, d2);    
+  //  Option<SetEdgeDesc> oedge = existsEdge(d1, d2);    
 
+/*
     if(oedge){
       SetEdgeDesc e = *oedge;
       SetEdge aux = G[e];
@@ -590,11 +623,14 @@ void Connectors::updateGraph(SetVertexDesc d1, SetVertexDesc d2,
       PWLMap pwaux2 = aux.es2_();
       pwaux2.addLMSet(lm2, s);
 
+      cout << aux.name << ": " << pwaux1 << ", " << pwaux2 << "\n";
+
       SetEdge E(aux.name, pwaux1, pwaux2);
       G[e] = E;
     }
 
     else{
+*/
       string enm = "E" + to_string(eCount2_);
       SetEdge E(enm, e1, e2);
       SetEdgeDesc e;
@@ -602,7 +638,7 @@ void Connectors::updateGraph(SetVertexDesc d1, SetVertexDesc d2,
       boost::tie(e, b) = boost::add_edge(d1, d2, G);
       G[e] = E;
       ++eCount2_;
-    }
+//    }
   }
 
   else
@@ -616,6 +652,17 @@ void Connectors::generateCode(PWLMap pw){
   Set vcdom = pw.wholeDom();
   Set vcim = pw.image(vcdom);
 
+  ExpList nms;
+  ExpList::iterator itnms = nms.begin();
+  int ascii = 0;
+  for(unsigned int i = 0; i < vCount_.size(); ++i){
+    string s(1, 105 + ascii);
+    Expression nm(s);
+    itnms = nms.insert(itnms, nm);
+    ++itnms;
+    ++ascii;
+  }
+
   foreach_(AtomSet as, vcim.asets_()){
     Set auxs;
     auxs.addAtomSet(as);
@@ -625,24 +672,16 @@ void Connectors::generateCode(PWLMap pw){
     // Variables of equality in the ForEq
     Pair<vector<Name>, vector<Name>> p = separateVars();
 
-    ExpList nms;
-    ExpList::iterator itnms = nms.begin();
-
     foreach_(AtomSet auxi, vcdomiaux.asets_()){
       MultiInterval mi = auxi.aset_();
 
       IndexList ran1;
       IndexList::iterator itran1 = ran1.begin(); 
-      int ascii = 0;
       OrdCT<NI1> off1 = getOff(mi);
       MultiInterval mirange1 = applyOff(mi, off1);
+      itnms = nms.begin();
       // Range of ForEq
       foreach_(Interval i, mirange1.inters_()){
-        string s(1, 105 + ascii);
-        Expression nm(s);
-        itnms = nms.insert(itnms, nm);
-        ++itnms;
-
         Expression elo(i.lo_());
         Expression est(i.step_());
         Expression ehi(i.hi_());
@@ -650,9 +689,11 @@ void Connectors::generateCode(PWLMap pw){
         Expression auxer(auxr);
         Option<Expression> r(auxer); 
 
+        Name s = get<Name>(*itnms);
         Index ind(s, r);
         itran1 = ran1.insert(itran1, ind);
         ++itran1;
+        ++itnms;
       }
       Indexes range1(ran1);
 
@@ -674,10 +715,38 @@ void Connectors::generateCode(PWLMap pw){
       for(; itv1 != vars1.end(); ++itv1){
         for(; itv2 != vars2.end(); ++itv2){
           if(get<1>(*itv1) == get<1>(*itv2)){
-            Reference ref1(get<0>(*itv1), nms); // Left of equality
+            ExpList auxnms1;
+
+            const Name nm1 = get<0>(*itv1);
+            Option<MultiInterval> omivar1 = nmvtable_[nm1];
+            MultiInterval mivar1;
+            if(omivar1)
+              mivar1 = *omivar1;
+
+            else
+              ERROR("Should be a vertex");
+
+            if(mivar1.size() != 1)
+              auxnms1 = nms;
+
+            Reference ref1(get<0>(*itv1) + "_" + get<1>(*itv1), auxnms1); // Left of equality
             Expression l(ref1);
 
-            Reference ref2(get<0>(*itv2), inds1);
+            ExpList auxnms2;
+
+            const Name nm2 = get<0>(*itv2);
+            Option<MultiInterval> omivar2 = nmvtable_[nm2];
+            MultiInterval mivar2;
+            if(omivar2)
+              mivar2 = *omivar2;
+
+            else
+              ERROR("Should be a vertex");
+
+            if(mivar2.size() != 1)
+              auxnms2 = inds1;
+
+            Reference ref2(get<0>(*itv2) + "_" + get<1>(*itv2), auxnms2);
             Expression r(ref2);
 
             Equality eq1(l, r);
@@ -716,7 +785,7 @@ void Connectors::generateCode(PWLMap pw){
     }
     Indexes range2(ran2);
 
-    vector<Name> flowvars = get<0>(p);
+    vector<Name> flowvars = get<1>(p);
 
     ExpList exps;
     ExpList::iterator itexps = exps.begin();
@@ -738,15 +807,29 @@ void Connectors::generateCode(PWLMap pw){
       for(; itv3 != vars3.end(); ++itv3){
         Expression auxexp;
 
+        ExpList auxnms3;
+
+        const Name nm3 = get<0>(*itv3);
+        Option<MultiInterval> omivar3 = nmvtable_[nm3];
+        MultiInterval mivar3;
+        if(omivar3)
+          mivar3 = *omivar3;
+
+        else
+          ERROR("Should be a vertex");
+
+        if(mivar3.size() != 1)
+           auxnms3 = inds2;
+
         if(get<1>(tm2)){
-          RefTuple rt(get<0>(*itv3), inds2);
+          RefTuple rt(get<0>(*itv3) + "_" + get<1>(*itv3), auxnms3);
           AddAll aa(rt);
           Expression eaa(aa);
           auxexp = eaa; 
         }
 
         else{
-          Reference ref3(get<0>(*itv3), inds2); 
+          Reference ref3(get<0>(*itv3) + "_" + get<1>(*itv3), auxnms3); 
           Expression eref3(ref3);
           auxexp = eref3;
         }
@@ -851,7 +934,7 @@ vector<Pair<Name, Name>> Connectors::getVars(vector<Name> vs, Set sauxi){
         if(n.length() > nm.length()){
           if(n.substr(0, nm.length()) == nm && n.substr(nm.length(), 1) == "_"){
             Name suffix = n.substr(nm.length() + 1);
-            Pair<Name, Name> p(n, suffix);
+            Pair<Name, Name> p(nm, suffix);
             itvars = vars.insert(itvars, p);
             ++itvars;
           }

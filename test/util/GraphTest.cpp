@@ -24,6 +24,7 @@
 #include <boost/unordered_set.hpp>
 
 #include <util/graph/graph_definition.h>
+#include <util/graph/graph_printer.h>
 
 using namespace boost::unit_test;
 
@@ -4159,6 +4160,14 @@ void Test2D(){
   cd.addAtomSet(as7);
   SetVertex V7("V7", 7, cd, 0);
 
+  cout << "sp: " << sp << "\n";
+  cout << "sn: " << sn << "\n";
+  cout << "gp: " << gp << "\n";
+  cout << "cd: " << cd << "\n";
+  cout << "cl: " << cl << "\n";
+  cout << "cu: " << cu << "\n";
+  cout << "cr: " << cr << "\n";
+
   float offE11 = 0;
   float offE12 = 0;
   float offE21 = offE11 + offcl1;
@@ -4194,6 +4203,8 @@ void Test2D(){
   mapE1cr.addSetLM(domE1, lm2);
   SetEdge E1("E1", 1, mapE1cl, mapE1cr, 0);
 
+  cout << "cl, cr: " << mapE1cl << ", " << mapE1cr << "\n";
+
   Interval i17(1 + offE21, 1, offE31);
   Interval i18(1 + offE22, 1, offE32);
   MultiInterval mi9;
@@ -4213,6 +4224,8 @@ void Test2D(){
   PWLMap mapE2cd;
   mapE2cd.addSetLM(domE2, lm4); 
   SetEdge E2("E2", 2, mapE2cu, mapE2cd, 0);
+
+  cout << "cu, cd: " << mapE2cu << ", " << mapE2cd << "\n";
 
   Interval i19(1 + offE31, 1, offE41);
   Interval i20(1 + offE32, 1, offE42); 
@@ -4234,6 +4247,8 @@ void Test2D(){
   mapE3cr.addSetLM(domE3, lm6);
   SetEdge E3("E3", 3, mapE3cl, mapE3cr, 0);
 
+  cout << "cl, cr: " << mapE3cl << ", " << mapE3cr << "\n";
+
   Interval i21(1 + offE41, 1, offE51);
   Interval i22(1 + offE42, 1, offE52);
   MultiInterval mi11;
@@ -4254,6 +4269,8 @@ void Test2D(){
   mapE4sp.addSetLM(domE4, lm8);
   SetEdge E4("E4", 4, mapE4cu, mapE4sp, 0);
 
+  cout << "cu, sp: " << mapE4cu << ", " << mapE4sp << "\n";
+
   Interval i23(1 + offE51, 1, offE61);
   Interval i24(1 + offE52, 1, offE62);
   MultiInterval mi12;
@@ -4273,6 +4290,8 @@ void Test2D(){
   PWLMap mapE5gp;
   mapE5gp.addSetLM(domE5, lm10);
   SetEdge E5("E5", 5, mapE5cd, mapE5gp, 0);
+
+  cout << "cd, gp: " << mapE5cd << ", " << mapE5gp << "\n";
  
   Interval i25(1 + offE61, 1, offE71);
   Interval i26(1 + offE62, 1, offE72);
@@ -4293,6 +4312,8 @@ void Test2D(){
   PWLMap mapE6gp;
   mapE6gp.addSetLM(domE6, lm12);
   SetEdge E6("E6", 6, mapE6sn, mapE6gp, 0); 
+
+  cout << "sn, gp: " << mapE6sn << ", " << mapE6gp << "\n";
 
   SBGraph g;
 
@@ -4340,6 +4361,10 @@ void Test2D(){
 
   PWLMap res1 = connectedComponents(g);
   cout << "res1: " << res1 << "\n";
+
+  Graph::GraphPrinter gp3(g, -1);
+  std::string fn3("graph3.dot");
+  gp3.printGraph(fn3);
   
   BOOST_CHECK(true);
 }

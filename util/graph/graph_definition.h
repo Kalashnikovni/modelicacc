@@ -573,6 +573,15 @@ struct MultiInterImp1{
     return MultiInterImp1(auxRes);
   }
 
+  int size(){
+    int res = 1;
+    BOOST_FOREACH(IntervalImp i, inters){
+      res *= i.size();
+    }
+
+    return res; 
+  }
+
   bool operator<(const MultiInterImp1 &other) const{
     typename CT1<IntervalImp>::const_iterator iti2 = other.inters.begin();
 
@@ -673,6 +682,10 @@ struct MultiInterAbs{
 
   MultiInterAbs replace(IntervalImp &i, int dim){
     return MultiInterAbs(multiInterImp.replace(i, dim));
+  }
+
+  int size(){
+    return multiInterImp.size();
   }
 
   bool operator<(const MultiInterAbs &other) const{
